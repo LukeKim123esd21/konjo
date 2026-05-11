@@ -35,17 +35,21 @@ export const syncUserProfile = async (user: FirebaseUser): Promise<UserProfile> 
   const userDoc = await getDoc(userDocRef);
 
   if (!userDoc.exists()) {
-    const newProfile: UserProfile = {
-      uid: user.uid,
+    const newProfileData = {
       email: user.email || '',
       displayName: user.displayName || 'Anonymous',
       role: 'NORMAL',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
-    await setDoc(userDocRef, newProfile);
-    return newProfile;
+    try {
+      await setDoc(userDocRef, newProfileData);
+    } catch (error) {
+      console.error("Error creating user profile:", error);
+      throw error;
+    }
+    return { uid: user.uid, ...newProfileData } as UserProfile;
   }
 
-  return userDoc.data() as UserProfile;
+  return { uid: user.uid, ...userDoc.data() } as UserProfile;
 };

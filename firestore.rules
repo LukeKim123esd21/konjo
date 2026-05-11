@@ -27,7 +27,12 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // User Validation
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'butangas199@gmail.com';
+    }
+
+    // --- Validation Blueprints ---
+
     function isValidUser(data) {
       return data.keys().hasAll(['email', 'displayName', 'role', 'createdAt', 'updatedAt']) 
           && data.keys().size() == 5
@@ -38,8 +43,42 @@ service cloud.firestore {
           && data.updatedAt is timestamp;
     }
 
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.email == 'butangas199@gmail.com';
+    function isValidPortfolio(data) {
+      return data.keys().hasAll(['image', 'title', 'createdAt'])
+          && data.image is string && data.image.size() <= 1000
+          && data.title is string && data.title.size() <= 200
+          && data.createdAt is timestamp
+          && (data.keys().hasOnly(['image', 'title', 'createdAt', 'videoUrl']));
+    }
+
+    function isValidSchedule(data) {
+      return data.keys().hasAll(['date', 'title', 'type', 'createdBy'])
+          && data.keys().size() == 4
+          && data.date is string && data.date.size() == 10
+          && data.title is string && data.title.size() <= 200
+          && data.type in ['BOOKED', 'AVAILABLE', 'EVENT']
+          && data.createdBy is string;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['heroTitle', 'heroDesc', 'footerText'])
+          && data.heroTitle is string && data.heroTitle.size() <= 200
+          && data.heroDesc is string && data.heroDesc.size() <= 2000
+          && data.footerText is string && data.footerText.size() <= 200
+          && (data.keys().hasOnly(['heroTitle', 'heroDesc', 'footerText', 'heroMediaUrl', 'heroMediaType']));
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'prices', 'dropDate', 'vipDropDate', 'description', 'image', 'instaLink', 'createdAt'])
+          && data.keys().size() == 8
+          && data.name is string && data.name.size() <= 200
+          && data.prices is map
+          && data.dropDate is string && data.dropDate.size() <= 30
+          && data.vipDropDate is string && data.vipDropDate.size() <= 30
+          && data.description is string && data.description.size() <= 2000
+          && data.image is string && data.image.size() <= 1000
+          && data.instaLink is string && data.instaLink.size() <= 1000
+          && data.createdAt is timestamp;
     }
 
     // --- Collections ---
@@ -63,7 +102,9 @@ service cloud.firestore {
 
     match /portfolio/{itemId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAdmin() && isValidPortfolio(incoming()) && incoming().createdAt == request.time;
+      allow update: if isAdmin() && isValidPortfolio(incoming());
+      allow delete: if isAdmin();
     }
 
     match /settings/{docId} {
@@ -73,7 +114,16 @@ service cloud.firestore {
 
     match /schedules/{scheduleId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAdmin() && isValidSchedule(incoming());
+      allow update: if isAdmin() && isValidSchedule(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidProduct(incoming()) && incoming().createdAt == request.time;
+      allow update: if isAdmin() && isValidProduct(incoming());
+      allow delete: if isAdmin();
     }
   }
 }

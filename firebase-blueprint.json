@@ -15,10 +15,11 @@
     },
     "PortfolioItem": {
       "title": "PortfolioItem",
-      "description": "Instagram-style portfolio image",
+      "description": "Instagram-style portfolio image or video",
       "type": "object",
       "properties": {
         "image": { "type": "string" },
+        "videoUrl": { "type": "string" },
         "title": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -26,11 +27,13 @@
     },
     "SiteContent": {
       "title": "SiteContent",
-      "description": "Dynamic text content for the landing page",
+      "description": "Dynamic text and media content for the landing page",
       "type": "object",
       "properties": {
         "heroTitle": { "type": "string" },
         "heroDesc": { "type": "string" },
+        "heroMediaUrl": { "type": "string" },
+        "heroMediaType": { "type": "string", "enum": ["image", "video"] },
         "footerText": { "type": "string" }
       }
     },
@@ -45,6 +48,22 @@
         "createdBy": { "type": "string" }
       },
       "required": ["date", "title", "type"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Limited drop product items",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "instaLink": { "type": "string" },
+        "prices": { "type": "object" },
+        "dropDate": { "type": "string", "format": "date-time" },
+        "vipDropDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "description", "image", "instaLink", "prices", "dropDate", "vipDropDate", "createdAt"]
     }
   },
   "firestore": {
@@ -63,6 +82,10 @@
     "/schedules/{scheduleId}": {
       "schema": "Schedule",
       "description": "Public booking schedules"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Limited drop items"
     }
   }
 }
