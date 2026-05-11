@@ -1,0 +1,867 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect } from 'react';
+import { 
+  Instagram, MessageCircle, Send, Globe, 
+  Lock, Clock, ExternalLink, ShieldCheck,
+  Camera, Calendar, ShoppingBag, Settings, X, ChevronRight, ChevronLeft, Plus, Trash2,
+  ArrowRight, LogOut, User as UserIcon
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { auth, signIn, logout, syncUserProfile, UserProfile, db } from './lib/firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { doc, onSnapshot, collection, query, orderBy, setDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+
+/**
+ * Global Configuration & Data
+ */
+const INSTAGRAM_URL = "https://www.instagram.com/konjo_grit/";
+const ADMIN_EMAIL = "butangas199@gmail.com";
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+const LOCALE_SETTINGS = {
+  KO: { label: '한국어', currency: '₩', rateKey: 'krw' },
+  EN: { label: 'English', currency: '$', rateKey: 'usd' },
+  FR: { label: 'Français', currency: '€', rateKey: 'eur' },
+  JP: { label: '日本語', currency: '¥', rateKey: 'jpy' },
+  CH: { label: '简体中文', currency: '¥', rateKey: 'cny' },
+};
+
+const TRANSLATIONS: Record<string, any> = {
+  KO: {
+    portfolio: 'Portfolio',
+    drop: 'Drop',
+    booking: 'Booking',
+    guestMode: 'GUEST MODE',
+    vipAccess: 'VIP ACCESS',
+    explore: 'EXPLORE ARCHIVE',
+    limitedDrop: 'Limited Drop',
+    dropDesc: '모든 제품은 인스타그램(@konjo_grit) 드랍 일정에 맞춰 한정 판매됩니다.',
+    reservation: 'Reservation',
+    resDesc: '원활한 작업을 위해 모든 상담은 예약제로 운영됩니다.\n인스타그램 DM(@konjo_grit) 또는 하단 상담 채널로 연락주세요.',
+    connect: '상담 메신저 연결하기',
+    management: 'Management',
+    siteConfig: 'Site Config',
+    prodManager: 'Product Manager',
+    vipWhitelist: 'VIP Whitelist',
+    autoResponse: 'Automatic Response Template',
+    login: '로그인',
+    logout: '로그아웃',
+    addPortfolio: '포트폴리오 추가',
+    edit: '수정',
+  },
+  EN: {
+    portfolio: 'Portfolio',
+    drop: 'Drop',
+    booking: 'Booking',
+    guestMode: 'GUEST MODE',
+    vipAccess: 'VIP ACCESS',
+    explore: 'EXPLORE ARCHIVE',
+    limitedDrop: 'Limited Drop',
+    dropDesc: 'All products are sold in limited quantities according to the Instagram (@konjo_grit) drop schedule.',
+    reservation: 'Reservation',
+    resDesc: 'All consultations are by appointment only for smooth work.\nPlease contact us via Instagram DM (@konjo_grit) or the consultation channel below.',
+    connect: 'Connect to Messenger',
+    management: 'Management',
+    siteConfig: 'Site Config',
+    prodManager: 'Product Manager',
+    vipWhitelist: 'VIP Whitelist',
+    autoResponse: 'Automatic Response Template',
+    login: 'LOGIN',
+    logout: 'LOGOUT',
+    addPortfolio: 'ADD PORTFOLIO',
+    edit: 'EDIT',
+  },
+  FR: {
+    portfolio: 'Portfolio',
+    drop: 'Drop',
+    booking: 'Réservation',
+    guestMode: 'MODE INVITÉ',
+    vipAccess: 'ACCÈS VIP',
+    explore: 'EXPLORER L\'ARCHIVE',
+    limitedDrop: 'Édition Limitée',
+    dropDesc: 'Tous les produits sont vendus en quantités limitées selon le calendrier de Instagram (@konjo_grit).',
+    reservation: 'Réservation',
+    resDesc: 'Toutes les consultations se font uniquement sur rendez-vous.\nVeuillez nous contacter via Instagram DM (@konjo_grit) 또는 le canal ci-dessous.',
+    connect: 'Contacter le Messager',
+    management: 'Gestion',
+    siteConfig: 'Configuration',
+    prodManager: 'Gestionnaire de Produits',
+    vipWhitelist: 'Liste Blanche VIP',
+    autoResponse: 'Modèle de Réponse Automatique',
+  },
+  JP: {
+    portfolio: 'ポートフォリオ',
+    drop: 'ドロップ',
+    booking: '予約',
+    guestMode: 'ゲストモード',
+    vipAccess: 'VIPアクセス',
+    explore: 'アーカイブを探索',
+    limitedDrop: 'リミテッドドロップ',
+    dropDesc: 'すべての製品は、Instagram（@konjo_grit）のドロップスケジュールに従って限定販売されます。',
+    reservation: '予約',
+    resDesc: '円滑な作業のため、すべての相談は予約制で運営されます。\nInstagram DM（@konjo_grit）または下段の相談チャネルにお問い合わせください。',
+    connect: 'メッセンジャーに接続',
+    management: '管理',
+    siteConfig: 'サイト設定',
+    prodManager: '製品管理',
+    vipWhitelist: 'VIPホワイトリスト',
+    autoResponse: '自動応答テンプレート',
+  },
+  CH: {
+    portfolio: '作品集',
+    drop: '发布',
+    booking: '预约',
+    guestMode: '访客模式',
+    vipAccess: 'VIP访问',
+    explore: '探索档案',
+    limitedDrop: '限量发布',
+    dropDesc: '所有产品均根据 Instagram (@konjo_grit) 发布时间表限量销售。',
+    reservation: '预约',
+    resDesc: '为了确保工作顺利进行，所有咨询均实行预约制。\n请通过 Instagram DM (@konjo_grit) 或下方的咨询渠道与我们联系。',
+    connect: '连接到信使',
+    management: '管理',
+    siteConfig: '网站配置',
+    prodManager: '产品管理',
+    vipWhitelist: 'VIP 白名单',
+    autoResponse: '自动回复模板',
+  },
+};
+
+const PORTFOLIO_ITEMS = [
+  { id: 1, title: "VOID ARCHIVE", image: "https://images.unsplash.com/photo-1590201772372-897d0f338600?auto=format&fit=crop&q=80" },
+  { id: 2, title: "DISTRESSED SERIES", image: "https://images.unsplash.com/photo-1590201772373-897d0f338600?auto=format&fit=crop&q=80" },
+  { id: 3, title: "INKS & SHADOWS", image: "https://images.unsplash.com/photo-1590201772374-897d0f338600?auto=format&fit=crop&q=80" },
+  { id: 4, title: "MINIMALIST LINES", image: "https://images.unsplash.com/photo-1590201772375-897d0f338600?auto=format&fit=crop&q=80" },
+  { id: 5, title: "CONCRETE JUNGLE", image: "https://images.unsplash.com/photo-1590201772376-897d0f338600?auto=format&fit=crop&q=80" },
+  { id: 6, title: "MIDNIGHT BLOOM", image: "https://images.unsplash.com/photo-1590201772377-897d0f338600?auto=format&fit=crop&q=80" },
+  { id: 7, title: "RAW TEXTURE", image: "https://images.unsplash.com/photo-1590201772378-897d0f338600?auto=format&fit=crop&q=80" },
+  { id: 8, title: "CYBERPUNK ERA", image: "https://images.unsplash.com/photo-1590201772379-897d0f338600?auto=format&fit=crop&q=80" },
+];
+
+const SAMPLE_PRODUCTS = [
+  {
+    id: 1,
+    name: "KONJO 'VOID' SIGNATURE HOODIE",
+    prices: { krw: '129,000', usd: '95', eur: '89', jpy: '14,500', cny: '680' },
+    dropDate: '2026-05-20T20:00:00', 
+    vipDropDate: '2026-05-18T20:00:00', 
+    instaLink: INSTAGRAM_URL,
+    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80"
+  },
+  {
+    id: 2,
+    name: "ARCHIVE DISTRESSED LONG SLEEVE",
+    prices: { krw: '85,000', usd: '65', eur: '59', jpy: '9,500', cny: '450' },
+    dropDate: '2026-05-25T20:00:00',
+    vipDropDate: '2026-05-23T20:00:00',
+    instaLink: INSTAGRAM_URL,
+    image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&q=80"
+  }
+];
+
+/**
+ * Floating Consultation Component
+ */
+const FloatingConsultation = () => (
+  <div className="fixed bottom-8 right-8 z-[100] flex flex-col gap-4">
+    {[
+      { icon: <Instagram size={22}/>, label: 'Instagram DM', link: INSTAGRAM_URL, color: 'hover:text-neon' },
+      { icon: <MessageCircle size={22}/>, label: 'KakaoTalk', link: "#", color: 'hover:text-[#FEE500]' },
+      { icon: <Send size={22}/>, label: 'Telegram', link: "#", color: 'hover:text-[#0088cc]' },
+      { icon: <MessageCircle size={22}/>, label: 'WeChat', link: "#", color: 'hover:text-[#07C160]' },
+      { icon: <ExternalLink size={22}/>, label: 'Messenger', link: "#", color: 'hover:text-[#0084FF]' },
+    ].map((sns, idx) => (
+      <motion.div 
+        key={idx} 
+        className="group relative flex items-center justify-end"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.5 + idx * 0.1 }}
+      >
+        <span className="absolute right-16 opacity-0 group-hover:opacity-100 transition-all text-[10px] tracking-widest text-neon bg-black/90 px-3 py-1.5 border border-neon/30 whitespace-nowrap">
+          {sns.label}
+        </span>
+        <a 
+          href={sns.link} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className={`bg-surface p-4 rounded-full border border-white/10 text-offwhite transition-all hover:scale-110 shadow-2xl ${sns.color}`}
+        >
+          {sns.icon}
+        </a>
+      </motion.div>
+    ))}
+    <div className="h-10 w-[1px] bg-neon mx-auto mt-2 animate-pulse" />
+  </div>
+);
+
+/**
+ * Drop Card Component
+ */
+const DropCard = ({ product, locale, userStatus }: { product: any, locale: string, userStatus: string }) => {
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isLive, setIsLive] = useState(false);
+  const isVIP = userStatus === 'VIP';
+  const targetDate = new Date(isVIP ? product.vipDropDate : product.dropDate);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const diff = targetDate.getTime() - now.getTime();
+      if (diff <= 0) {
+        setIsLive(true);
+        setTimeLeft("COLLECTION LIVE");
+        clearInterval(timer);
+      } else {
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / 1000 / 60) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        setTimeLeft(`${d}D ${h}H ${m}M ${s}S`);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  const currency = (LOCALE_SETTINGS as any)[locale].currency;
+  const rateKey = (LOCALE_SETTINGS as any)[locale].rateKey;
+
+  return (
+    <motion.div 
+      layout
+      className="group relative bg-surface border border-white/5 overflow-hidden transition-all hover:border-neon/40"
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+    >
+      {isVIP && (
+        <div className="absolute top-6 left-6 z-10 flex items-center gap-2 bg-neon text-black px-3 py-1 text-[9px] font-black tracking-widest">
+          <ShieldCheck size={12} /> VIP EARLY ACCESS
+        </div>
+      )}
+      <div className="aspect-[3/4] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700">
+        <img 
+          src={product.image} 
+          alt={product.name} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
+        />
+      </div>
+      <div className="p-8 space-y-6">
+        <div className="flex justify-between items-start">
+          <h3 className="text-xl text-white font-light tracking-tighter leading-tight w-2/3">{product.name}</h3>
+          <p className="text-neon font-bold text-lg leading-none">
+            {currency}{product.prices[rateKey]}
+          </p>
+        </div>
+        <div className="pt-6 border-t border-white/10 flex flex-col gap-5">
+          <div className="flex items-center gap-3 text-[11px] tracking-[0.2em] text-offwhite/50">
+            <Clock size={14} className="text-neon" /> {timeLeft}
+          </div>
+          <motion.button 
+            whileHover={isLive ? { scale: 1.02 } : {}}
+            whileTap={isLive ? { scale: 0.98 } : {}}
+            disabled={!isLive}
+            onClick={() => window.open(product.instaLink, '_blank')}
+            className={`w-full py-5 text-[10px] tracking-[0.4em] font-bold transition-all
+              ${isLive ? 'bg-neon text-black hover:bg-white' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+          >
+            {isLive ? 'PURCHASE ON INSTAGRAM' : 'COMING SOON'}
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const DynamicCalendar = ({ schedules, isAdmin, onAdd, onDelete }: { schedules: any[], isAdmin: boolean, onAdd: (d: string) => void, onDelete: (id: string) => void }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  const days = Array.from({ length: 42 }, (_, i) => {
+    const day = i - firstDayOfMonth + 1;
+    if (day < 1 || day > daysInMonth) return null;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const daySchedules = schedules.filter(s => s.date === dateStr);
+    return { day, dateStr, daySchedules };
+  });
+
+  return (
+    <div className="bg-surface p-8 border border-white/5 rounded-sm">
+      <div className="flex justify-between items-center mb-10">
+        <h3 className="text-xl font-light tracking-[0.3em] text-white">
+          {year}. {String(month + 1).padStart(2, '0')}
+        </h3>
+        <div className="flex gap-4">
+          <button onClick={prevMonth} className="p-2 hover:text-neon transition-colors"><ChevronLeft size={20} /></button>
+          <button onClick={nextMonth} className="p-2 hover:text-neon transition-colors"><ChevronRight size={20} /></button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+          <div key={d} className="text-[10px] text-white/20 mb-4 tracking-tighter">{d}</div>
+        ))}
+        {days.map((d, i) => (
+          <div 
+            key={i} 
+            onClick={() => d && isAdmin && onAdd(d.dateStr)}
+            className={`aspect-square border border-white/5 p-2 flex flex-col items-start gap-1 transition-all relative
+              ${d ? 'hover:bg-white/5' : 'opacity-0'} 
+              ${d && isAdmin ? 'cursor-pointer hover:border-neon/30' : ''}`}
+          >
+            {d && (
+              <>
+                <span className={`text-[10px] ${d.daySchedules.length > 0 ? 'text-neon' : 'text-white/30'}`}>
+                  {d.day}
+                </span>
+                <div className="flex flex-col gap-1 w-full">
+                  {d.daySchedules.map((s, idx) => (
+                    <div key={idx} className="group relative flex items-center justify-between bg-neon/10 px-1 py-0.5 rounded-[2px]">
+                      <span className="text-[8px] text-neon truncate max-w-[80%] uppercase tracking-tighter">{s.title}</span>
+                      {isAdmin && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
+                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:scale-110 transition-all"
+                        >
+                          <X size={8} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Main Application
+ */
+export default function App() {
+  const [page, setPage] = useState('home');
+  const [locale, setLocale] = useState('KO');
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImg, setSelectedImg] = useState<string | null>(null);
+
+  // Firestore Data States
+  const [siteContent, setSiteContent] = useState<any>({
+    heroTitle: "KONJO",
+    heroDesc: "Premium Tattoo Artistry & Conceptual Garments Archive.",
+    footerText: "QUIET LUXURY, LOUD IMPACT."
+  });
+  const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
+
+  useEffect(() => {
+    // 1. Auth & Profile
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        syncUserProfile(currentUser).then(setUserProfile);
+        const profileRef = doc(db, 'users', currentUser.uid);
+        onSnapshot(profileRef, (d) => d.exists() && setUserProfile(d.data() as UserProfile));
+      } else {
+        setUserProfile(null);
+      }
+      setLoading(false);
+    });
+
+    // 2. Portfolio Items
+    const qPortfolio = query(collection(db, 'portfolio'), orderBy('createdAt', 'desc'));
+    const unsubscribePortfolio = onSnapshot(qPortfolio, (snapshot) => {
+      setPortfolioItems(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // 3. Schedules
+    const unsubscribeSchedules = onSnapshot(collection(db, 'schedules'), (snapshot) => {
+      setSchedules(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // 4. Site Content (CMS)
+    const unsubscribeContent = onSnapshot(doc(db, 'settings', 'content'), (snapshot) => {
+      if (snapshot.exists()) setSiteContent(snapshot.data());
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribePortfolio();
+      unsubscribeSchedules();
+      unsubscribeContent();
+    };
+  }, []);
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
+  const handleLogin = async () => {
+    try {
+      await signIn();
+    } catch (error) {
+      console.error("Login failed", error);
+    }
+  };
+
+  // Admin Actions
+  const handleUpdateContent = async (newContent: any) => {
+    try {
+      await setDoc(doc(db, 'settings', 'content'), newContent, { merge: true });
+    } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'settings/content'); }
+  };
+
+  const handleAddPortfolio = async () => {
+    const imgUrl = prompt("이미지 URL을 입력하세요:");
+    const title = prompt("작품 제목을 입력하세요:") || "UNTITLED";
+    if (imgUrl) {
+      try {
+        await addDoc(collection(db, 'portfolio'), {
+          image: imgUrl,
+          title,
+          createdAt: serverTimestamp()
+        });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, 'portfolio');
+      }
+    }
+  };
+
+  const handleDeletePortfolio = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("삭제하시겠습니까?")) {
+      try {
+        await deleteDoc(doc(db, 'portfolio', id));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `portfolio/${id}`);
+      }
+    }
+  };
+
+  const handleAddSchedule = async (date: string) => {
+    const title = prompt(`${date} 일정을 입력하세요:`);
+    if (title) {
+      try {
+        await addDoc(collection(db, 'schedules'), {
+          date,
+          title,
+          type: 'EVENT',
+          createdBy: user?.uid
+        });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, 'schedules');
+      }
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (confirm("일정을 삭제하시겠습니까?")) {
+      try {
+        await deleteDoc(doc(db, 'schedules', id));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `schedules/${id}`);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-black flex items-center justify-center">
+        <div className="w-12 h-[1px] bg-neon animate-pulse" />
+      </div>
+    );
+  }
+
+  const userStatus = userProfile?.role || 'NORMAL';
+
+  return (
+    <div className="min-h-screen bg-black text-offwhite font-sans selection:bg-neon selection:text-black">
+      
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-[90] flex justify-between items-center px-10 py-8 bg-black/80 backdrop-blur-xl border-b border-white/5">
+        <div className="flex items-center gap-16">
+          <motion.h1 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-2xl font-black tracking-[0.7em] text-white cursor-pointer" 
+            onClick={() => setPage('home')}
+          >
+            根性
+          </motion.h1>
+          <div className="hidden md:flex gap-10 text-[10px] tracking-[0.3em] uppercase text-offwhite/40">
+            {['portfolio', 'drop', 'booking'].map((item) => (
+              <button 
+                key={item}
+                onClick={() => setPage(item)} 
+                className={`hover:text-neon transition-colors relative py-1 ${page === item && 'text-neon'}`}
+              >
+                {TRANSLATIONS[locale][item]}
+                {page === item && (
+                  <motion.div layoutId="nav-underline" className="absolute bottom-0 left-0 w-full h-[1px] bg-neon" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-8">
+          {user ? (
+            <div className="flex items-center gap-6">
+              <div 
+                className={`text-[9px] px-4 py-1.5 border transition-all tracking-widest ${userStatus === 'VIP' ? 'border-neon text-neon shadow-[0_0_15px_rgba(204,255,0,0.3)]' : 'border-white/10 text-white/20'}`}
+              >
+                {userStatus === 'VIP' ? (TRANSLATIONS[locale] as any).vipAccess : (TRANSLATIONS[locale] as any).guestMode}
+              </div>
+              <div className="flex items-center gap-3 border-l border-white/10 pl-6">
+                <div className="text-[10px] tracking-widest text-offwhite/60">
+                  {user.displayName}
+                </div>
+                <button 
+                  onClick={logout}
+                  className="p-2 text-white/20 hover:text-neon transition-colors"
+                  title={(TRANSLATIONS[locale] as any).logout}
+                >
+                  <LogOut size={14} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button 
+              onClick={handleLogin}
+              className="flex items-center gap-3 text-[10px] tracking-[0.3em] text-neon border border-neon/30 px-6 py-2 hover:bg-neon hover:text-black transition-all"
+            >
+              <UserIcon size={14} /> {(TRANSLATIONS[locale] as any).login}
+            </button>
+          )}
+          
+          <div className="flex items-center gap-2 border-l border-white/10 pl-8">
+            <Globe size={14} className="text-neon" />
+            <select 
+              value={locale} 
+              onChange={(e) => setLocale(e.target.value)}
+              className="bg-transparent text-[10px] tracking-widest text-offwhite border-none outline-none cursor-pointer uppercase focus:ring-0"
+            >
+              {Object.keys(LOCALE_SETTINGS).map(lang => (
+                <option key={lang} value={lang} className="bg-[#121212]">{lang}</option>
+              ))}
+            </select>
+          </div>
+          
+          {isAdmin && (
+            <button onClick={() => setPage('admin')} className="text-offwhite/20 hover:text-neon transition-colors">
+              <Settings size={18} />
+            </button>
+          )}
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="pt-20">
+        <AnimatePresence mode="wait">
+          {page === 'home' && (
+            <motion.section 
+              key="home"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-[90vh] flex flex-col justify-center px-10 relative overflow-hidden"
+            >
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle,rgba(204,255,0,0.04)_0%,rgba(0,0,0,0)_70%)] pointer-events-none" />
+              <motion.h2 
+                initial={{ letterSpacing: '0.2em', opacity: 0 }}
+                animate={{ letterSpacing: '-0.05em', opacity: 0.9 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="text-[18vw] font-black leading-none text-white select-none whitespace-nowrap uppercase"
+              >
+                {siteContent.heroTitle}<span className="text-neon">.</span>
+              </motion.h2>
+              <div className="flex justify-between items-end mt-10">
+                <motion.p 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="max-w-md text-[10px] text-offwhite/40 leading-loose tracking-[0.2em] uppercase font-light"
+                >
+                  {siteContent.heroDesc.split('\n').map((line: string, i: number) => (
+                    <React.Fragment key={i}>{line}<br/></React.Fragment>
+                  ))}
+                </motion.p>
+                <div className="flex flex-col items-end gap-4">
+                  {isAdmin && (
+                    <button 
+                      onClick={() => {
+                        const h = prompt("Title:", siteContent.heroTitle);
+                        const d = prompt("Description:", siteContent.heroDesc);
+                        if (h && d) handleUpdateContent({ heroTitle: h, heroDesc: d });
+                      }}
+                      className="text-[8px] text-neon/40 hover:text-neon transition-colors tracking-widest border border-neon/20 px-2 py-1"
+                    >
+                      {TRANSLATIONS[locale].edit} CONTENT
+                    </button>
+                  )}
+                  <motion.button 
+                    onClick={() => setPage('portfolio')} 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.8 }}
+                    className="group flex items-center gap-4 text-[10px] tracking-[0.5em] text-white hover:text-neon transition-colors"
+                  >
+                    {TRANSLATIONS[locale].explore} <ChevronRight size={14} className="group-hover:translate-x-2 transition-transform text-neon" />
+                  </motion.button>
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {page === 'portfolio' && (
+            <motion.section 
+              key="portfolio"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="p-10"
+            >
+              <div className="flex justify-between items-center mb-10">
+                <h2 className="text-3xl font-light tracking-[0.5em] uppercase text-white">Archive</h2>
+                {isAdmin && (
+                  <button 
+                    onClick={handleAddPortfolio}
+                    className="flex items-center gap-2 bg-neon text-black px-4 py-2 text-[10px] font-bold tracking-widest hover:bg-white transition-colors"
+                  >
+                    <Plus size={14} /> {TRANSLATIONS[locale].addPortfolio}
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {portfolioItems.map((item, i) => (
+                  <motion.div 
+                    key={item.id} 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="group relative aspect-[3/4] bg-surface overflow-hidden cursor-pointer"
+                    onClick={() => setSelectedImg(item.image)}
+                  >
+                    <img 
+                      src={item.image} 
+                      className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-1000" 
+                      alt={item.title} 
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8">
+                      <div className="flex justify-between items-end">
+                        <p className="text-neon text-[9px] tracking-[0.3em] font-bold uppercase italic">
+                          {item.title}
+                        </p>
+                        {isAdmin && (
+                          <button onClick={(e) => handleDeletePortfolio(item.id, e)} className="text-red-500 hover:scale-110 transition-transform">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {page === 'drop' && (
+            <motion.section 
+              key="drop"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="px-10 py-24"
+            >
+              <div className="mb-24 space-y-4">
+                <h2 className="text-7xl font-black tracking-tighter text-white uppercase italic">{TRANSLATIONS[locale].limitedDrop}</h2>
+                <div className="flex items-center gap-4">
+                  <div className="h-[1px] w-12 bg-neon" />
+                  <p className="text-offwhite/30 text-[10px] tracking-[0.4em] uppercase">{TRANSLATIONS[locale].dropDesc}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                {SAMPLE_PRODUCTS.map(product => (
+                  <DropCard key={product.id} product={product} locale={locale} userStatus={userStatus} />
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {page === 'booking' && (
+            <motion.section 
+              key="booking"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="max-w-5xl mx-auto py-32 px-10"
+            >
+              <div className="text-center mb-20 space-y-6">
+                <h2 className="text-4xl tracking-[0.5em] text-white font-light uppercase">{TRANSLATIONS[locale].reservation}</h2>
+                <div className="h-[1px] w-12 bg-neon mx-auto" />
+                <p className="text-offwhite/40 text-[10px] tracking-widest leading-loose whitespace-pre-line">
+                  {TRANSLATIONS[locale].resDesc}
+                </p>
+              </div>
+              
+              <DynamicCalendar 
+                schedules={schedules} 
+                isAdmin={isAdmin} 
+                onAdd={handleAddSchedule}
+                onDelete={handleDeleteSchedule}
+              />
+
+              <div className="mt-10">
+                <button 
+                  onClick={() => window.open(INSTAGRAM_URL, '_blank')}
+                  className="w-full py-5 bg-neon text-black font-black text-[11px] tracking-[0.5em] hover:bg-white transition-colors uppercase flex items-center justify-center gap-3"
+                >
+                  {TRANSLATIONS[locale].connect} <ArrowRight size={16} />
+                </button>
+              </div>
+            </motion.section>
+          )}
+
+          {page === 'admin' && (
+            <motion.section 
+              key="admin"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="p-10 pt-20 flex gap-12"
+            >
+              <div className="w-64 space-y-10 border-r border-white/5 pr-10">
+                <h3 className="text-neon tracking-[0.3em] text-[10px] font-bold uppercase italic">{TRANSLATIONS[locale].management}</h3>
+                <ul className="space-y-8 text-offwhite/40 text-[10px] tracking-widest uppercase">
+                  <li className="text-white flex items-center gap-3 cursor-pointer"><Settings size={14} className="text-neon" /> {TRANSLATIONS[locale].siteConfig}</li>
+                  <li className="hover:text-white cursor-pointer transition-colors">{TRANSLATIONS[locale].prodManager}</li>
+                  <li className="hover:text-white cursor-pointer transition-colors">{TRANSLATIONS[locale].vipWhitelist}</li>
+                </ul>
+              </div>
+              <div className="flex-1 space-y-16">
+                <div className="bg-surface p-8 border border-neon/20 space-y-6">
+                  <h4 className="text-neon text-[10px] tracking-[0.3em] font-bold uppercase italic flex items-center gap-2">
+                    <MessageCircle size={14} /> {TRANSLATIONS[locale].autoResponse}
+                  </h4>
+                  <textarea 
+                    className="w-full bg-black border border-white/10 p-5 text-[11px] text-offwhite/70 leading-relaxed h-32 focus:border-neon outline-none transition-colors font-mono"
+                    defaultValue={`[KONJO] 안녕하세요. 문의주셔서 감사합니다.\n보내주신 도안과 부위 확인 후 인스타그램(@konjo_grit) DM을 통해 예약 절차를 안내해 드리겠습니다.\n\n예약금 안내: [신한 110-XXX-XXXXXX]`}
+                  />
+                </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </main>
+
+      <footer className="p-10 mt-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] tracking-[0.3em] text-white/20">
+        <p>© 2026 KONJO STUDIO. SEOUL / PARIS / TOKYO</p>
+        <div className="flex gap-10 items-center italic">
+          {isAdmin && (
+            <button 
+              onClick={() => {
+                const t = prompt("Footer text:", siteContent.footerText);
+                if (t) handleUpdateContent({ footerText: t });
+              }}
+              className="text-neon/30 hover:text-neon"
+            >
+              <Settings size={12} />
+            </button>
+          )}
+          <span className="text-neon/40 border-l border-neon/20 pl-4">{siteContent.footerText}</span>
+        </div>
+      </footer>
+
+      {/* Floating UI & Lightbox */}
+      <FloatingConsultation />
+      
+      <AnimatePresence>
+        {selectedImg && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" 
+            onClick={() => setSelectedImg(null)}
+          >
+            <motion.img 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              src={selectedImg} 
+              className="max-w-full max-h-[90vh] object-contain shadow-2xl" 
+              alt="Full View" 
+            />
+            <button className="absolute top-10 right-10 text-white/50 hover:text-neon transition-colors">
+              <X size={40} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
