@@ -503,59 +503,76 @@ const DynamicCalendar = ({ schedules, isAdmin, onAdd, onDelete }: { schedules: a
   });
 
   return (
-    <div className="bg-surface p-8 border border-white/5 rounded-sm">
-      <div className="flex justify-between items-center mb-10">
-        <h3 className="text-xl font-light tracking-[0.3em] text-white">
-          {year}. {String(month + 1).padStart(2, '0')}
-        </h3>
-        <div className="flex gap-4">
-          <button onClick={prevMonth} className="p-2 hover:text-neon transition-colors"><ChevronLeft size={20} /></button>
-          <button onClick={nextMonth} className="p-2 hover:text-neon transition-colors"><ChevronRight size={20} /></button>
+    <div className="bg-black/40 backdrop-blur-md p-4 md:p-10 border border-white/5 rounded-sm shadow-2xl">
+      <div className="flex justify-between items-center mb-12">
+        <div className="flex flex-col gap-2">
+          <h3 className="text-2xl font-black tracking-[0.4em] text-white italic">
+            {year}. {String(month + 1).padStart(2, '0')}
+          </h3>
+          <div className="h-[2px] w-8 bg-neon" />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={prevMonth} className="px-4 py-3 bg-white/5 hover:bg-neon hover:text-black transition-all rounded-sm border border-white/5"><ChevronLeft size={16} /></button>
+          <button onClick={nextMonth} className="px-4 py-3 bg-white/5 hover:bg-neon hover:text-black transition-all rounded-sm border border-white/5"><ChevronRight size={16} /></button>
         </div>
       </div>
       
-      <div className="grid grid-cols-7 gap-1 text-center">
+      <div className="grid grid-cols-7 gap-px bg-white/5 border border-white/5 w-full">
         {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-          <div key={d} className="text-[10px] text-white/50 mb-4 tracking-[0.2em] font-bold">{d}</div>
+          <div key={d} className={`bg-black py-3 md:py-4 text-[8px] md:text-[9px] tracking-[0.2em] font-black italic ${d === 'SUN' ? 'text-neon' : 'text-white/30'}`}>
+            {d}
+          </div>
         ))}
         {days.map((d, i) => (
           <div 
             key={i} 
             onClick={() => d && isAdmin && onAdd(d.dateStr)}
-            className={`min-h-[100px] md:min-h-[140px] border border-white/5 p-2 flex flex-col items-start gap-1 transition-all relative
-              ${d ? 'hover:bg-white/5' : 'opacity-0'} 
-              ${d && d.daySchedules.length > 0 ? 'bg-neon/5 border-neon/10' : ''}
-              ${d && isAdmin ? 'cursor-pointer hover:border-neon/30' : ''}`}
+            className={`min-h-[100px] md:min-h-[160px] bg-black p-2 md:p-3 flex flex-col items-start gap-1 md:gap-2 transition-all relative group/cell
+              ${d ? 'hover:bg-white/[0.02]' : 'bg-transparent'} 
+              ${d && isAdmin ? 'cursor-pointer' : ''}`}
           >
             {d && (
               <>
-                <span className={`text-[10px] md:text-xs font-bold ${d.daySchedules.length > 0 ? 'text-neon' : 'text-white/30'}`}>
-                  {d.day}
-                </span>
-                <div className="flex flex-col gap-1.5 w-full mt-1">
+                <div className="flex justify-between items-start w-full">
+                  <span className={`text-[10px] md:text-sm font-black italic transition-colors duration-500 ${d.daySchedules.length > 0 ? 'text-neon' : 'text-white/10 group-hover/cell:text-white/40'}`}>
+                    {String(d.day).padStart(2, '0')}
+                  </span>
+                  {d.daySchedules.length > 0 && (
+                    <div className="w-1 h-1 bg-neon shadow-[0_0_8px_rgba(0,255,153,0.3)] rounded-full animate-pulse md:hidden" />
+                  )}
+                </div>
+                
+                <div className="flex flex-col gap-1 w-full mt-1">
                   {d.daySchedules.map((s, idx) => (
-                    <div key={idx} className="group relative flex items-center justify-between bg-neon text-black px-1.5 py-1 rounded-[1px] shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
-                      <span className="text-[8px] md:text-[10px] font-black truncate w-full uppercase tracking-tighter">
+                    <div 
+                      key={idx} 
+                      className="group relative flex items-center h-5 md:h-7 bg-white/[0.03] border-l border-neon/50 pl-1.5 md:pl-2 pr-1 transition-all hover:bg-white/5"
+                    >
+                      <span className="text-[6px] md:text-[8px] font-black text-neon uppercase tracking-wider truncate w-full group-hover:text-white transition-colors">
                         {s.title === 'BOOKED' || s.title === 'RESERVED' ? 'RESERVED' : s.title}
                       </span>
                       {isAdmin && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
-                          className="absolute -right-1 -top-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                          className="absolute -right-1 -top-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-lg z-20"
                         >
-                          <X size={8} />
+                          <X size={6} />
                         </button>
                       )}
                     </div>
                   ))}
+                  
+                  {isAdmin && d && (
+                    <div className="absolute inset-x-0 bottom-0 h-[1px] bg-neon/0 group-hover/cell:bg-neon/30 transition-all duration-500" />
+                  )}
                 </div>
               </>
             )}
           </div>
         ))}
       </div>
-    </div>
-  );
+  </div>
+);
 };
 
 /**
@@ -675,6 +692,10 @@ export default function App() {
     awards: "2024 SEOUL TATTOO CONVENTION GOLD\n2023 PARIS ART EXPO FEATURED\nGLOBAL CREATIVE DIRECTOR\nCONCEPTUAL GARMENTS DESIGNER\nBLACKWORK SPECIALIST\nSEOUL FASHION WEEK COLLAB\nWORLD TATTOO TOUR 2022\nART BASEL MIAMI EXHIBITOR\nMASTER OF MODERN TATTOOING\nCONVICTION THROUGH INK",
     heroMediaUrl: "https://images.unsplash.com/photo-1590201772372-897d0f338600?auto=format&fit=crop&q=80",
     heroMediaType: "image",
+    mobileDividerImageUrl: "",
+    logoImageUrl: "",
+    logoText: "根性",
+    logoSubtext: "KONJO",
     footerText: "QUIET LUXURY, LOUD IMPACT.",
     bgMusicUrl: ""
   });
@@ -978,11 +999,25 @@ export default function App() {
             <motion.h1 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-xl md:text-2xl font-black tracking-[0.5em] md:tracking-[0.7em] text-white cursor-pointer flex flex-col items-center" 
+              className="font-black tracking-[0.5em] md:tracking-[0.7em] text-white cursor-pointer flex flex-col items-center" 
               onClick={() => setPage('home')}
             >
-              <span className="text-lg md:text-xl leading-none">根性</span>
-              <span className="text-[8px] md:text-[10px] tracking-[0.4em] mt-1 font-light opacity-60">KONJO</span>
+              {siteContent.logoImageUrl ? (
+                <img 
+                  src={siteContent.logoImageUrl} 
+                  alt="Logo" 
+                  className="h-8 md:h-10 w-auto object-contain"
+                  onError={(e) => {
+                    // Fallback if image fails
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <>
+                  <span className="text-lg md:text-xl leading-none">{siteContent.logoText || '根性'}</span>
+                  <span className="text-[8px] md:text-[10px] tracking-[0.4em] mt-1 font-light opacity-60">{siteContent.logoSubtext || 'KONJO'}</span>
+                </>
+              )}
             </motion.h1>
             
             {/* Desktop Menu */}
@@ -1108,6 +1143,28 @@ export default function App() {
                     className="h-[1px] bg-white/10 mt-4 md:mt-8"
                   />
                 </div>
+
+                {/* Mobile Divider Image Slot */}
+                {siteContent.mobileDividerImageUrl && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="md:hidden w-full aspect-[2/3] bg-surface relative overflow-hidden border border-white/5"
+                  >
+                    <MediaRenderer 
+                      url={siteContent.mobileDividerImageUrl} 
+                      className="w-full h-full object-cover transition-transform duration-[3s] hover:scale-110" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-black/80" />
+                    <div className="absolute bottom-6 left-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1 h-1 bg-neon animate-pulse" />
+                        <span className="text-[7px] tracking-[.3em] font-black text-white/40 uppercase italic">Visual Interlude</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-20 items-start">
                   {/* Left Column: Awards & Career */}
@@ -1663,6 +1720,55 @@ export default function App() {
                           placeholder="https://www.youtube.com/watch?v=..."
                         />
                         <p className="text-[7px] text-white/20 tracking-wider uppercase">※ Instagram links are not supported for audio. Use YouTube.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] tracking-widest text-white/40 uppercase">Mobile Divider Image (Hero-History)</label>
+                        <input 
+                          type="text"
+                          value={siteContent.mobileDividerImageUrl || ''}
+                          onChange={(e) => handleUpdateContent({ mobileDividerImageUrl: e.target.value })}
+                          className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
+                          placeholder="https://..."
+                        />
+                        <p className="text-[7px] text-white/20 tracking-wider uppercase">※ Only visible on mobile devices between Hero and History.</p>
+                      </div>
+
+                      <div className="space-y-6 pt-4 border-t border-white/5">
+                        <h4 className="text-neon text-[10px] tracking-[0.3em] font-bold uppercase italic">Site Branding</h4>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] tracking-widest text-white/40 uppercase">Logo Image URL (Overrides Text)</label>
+                            <input 
+                              type="text"
+                              value={siteContent.logoImageUrl || ''}
+                              onChange={(e) => handleUpdateContent({ logoImageUrl: e.target.value })}
+                              className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
+                              placeholder="https://..."
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] tracking-widest text-white/40 uppercase">Logo Main Text</label>
+                              <input 
+                                type="text"
+                                value={siteContent.logoText || ''}
+                                onChange={(e) => handleUpdateContent({ logoText: e.target.value })}
+                                className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
+                                placeholder="根性"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] tracking-widest text-white/40 uppercase">Logo Subtext</label>
+                              <input 
+                                type="text"
+                                value={siteContent.logoSubtext || ''}
+                                onChange={(e) => handleUpdateContent({ logoSubtext: e.target.value })}
+                                className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
+                                placeholder="KONJO"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
