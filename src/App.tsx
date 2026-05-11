@@ -193,10 +193,22 @@ const TRANSLATIONS: Record<string, any> = {
 /**
  * Background Music Component (Hidden YouTube Player)
  */
-const BackgroundMusic = ({ url }: { url: string | undefined | null }) => {
+const BackgroundMusic = ({ url, isAdmin }: { url: string | undefined | null, isAdmin?: boolean }) => {
   const [isMuted, setIsMuted] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   
-  if (!url) return null;
+  if (!url) {
+    if (isAdmin) {
+      return (
+        <div className="fixed top-8 right-10 md:right-48 z-[100] opacity-20 hover:opacity-100 transition-opacity">
+          <span className="text-[7px] tracking-widest text-white/50 bg-white/5 px-3 py-1 border border-white/10 uppercase italic">
+            Audio Not Set
+          </span>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const getYouTubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
@@ -208,44 +220,83 @@ const BackgroundMusic = ({ url }: { url: string | undefined | null }) => {
   if (!id) return null;
 
   return (
-    <div className="fixed top-8 right-32 md:right-44 z-[100] flex items-center">
+    <div 
+      className="fixed bottom-8 left-8 z-[100]"
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+    >
       <div className="hidden pointer-events-none opacity-0 w-0 h-0 overflow-hidden">
         <iframe 
-          src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${id}`}
+          src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${id}&enablejsapi=1`}
           allow="autoplay; encrypted-media"
           title="Background Music"
+          key={id}
         />
       </div>
       
-      <button 
-        onClick={() => setIsMuted(!isMuted)}
-        className="flex items-center gap-3 group px-4 py-2 hover:bg-white/5 transition-all rounded-full border border-transparent hover:border-white/10"
-      >
-        <div className="relative flex items-center justify-center w-4 h-4">
-          {isMuted ? (
-            <VolumeX size={14} className="text-white/20 group-hover:text-neon transition-colors" />
-          ) : (
-            <div className="flex items-end gap-[2px] h-3">
-              {[0, 1, 2].map((i) => (
-                <motion.div 
-                  key={i}
-                  animate={{ height: ["20%", "100%", "20%"] }}
-                  transition={{ 
-                    duration: 0.6, 
-                    repeat: Infinity, 
-                    delay: i * 0.15,
-                    ease: "easeInOut"
-                  }}
-                  className="w-[2px] bg-neon" 
-                />
-              ))}
-            </div>
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => setIsMuted(!isMuted)}
+          className={`relative group flex items-center justify-center w-10 h-10 rounded-full border transition-all duration-700 backdrop-blur-md ${!isMuted ? 'border-neon/30 bg-neon/5' : 'border-white/5 bg-black/20 hover:border-white/20'}`}
+        >
+          {/* Subtle Ring Animation when playing */}
+          {!isMuted && (
+            <motion.div 
+              className="absolute inset-0 rounded-full border border-neon/50"
+              animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+            />
           )}
-        </div>
-        <span className={`text-[8px] tracking-[0.4em] uppercase transition-all duration-500 font-bold italic ${!isMuted ? 'text-neon' : 'text-white/20 group-hover:text-white/60'}`}>
-          {isMuted ? 'Sound Off' : 'Konjo Archive On'}
-        </span>
-      </button>
+
+          <div className="relative z-10 flex items-center justify-center">
+            {isMuted ? (
+              <VolumeX size={12} className="text-white/20 group-hover:text-white/60 transition-colors" />
+            ) : (
+              <div className="flex items-end gap-[1.5px] h-2.5">
+                {[0, 1, 2, 3].map((i) => (
+                  <motion.div 
+                    key={i}
+                    animate={{ height: ["40%", "100%", "40%"] }}
+                    transition={{ 
+                      duration: 0.8, 
+                      repeat: Infinity, 
+                      delay: i * 0.15,
+                      ease: "easeInOut"
+                    }}
+                    className="w-[1px] bg-neon shadow-[0_0_5px_rgba(0,255,153,0.3)]" 
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </button>
+
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div 
+              initial={{ opacity: 0, x: -5 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -5 }}
+              className="pointer-events-none"
+            >
+              <div className="flex flex-col border-l border-white/10 pl-4 py-1">
+                <span className={`text-[7px] tracking-[0.4em] uppercase font-bold italic leading-none ${!isMuted ? 'text-neon' : 'text-white/20'}`}>
+                  {isMuted ? 'AUDIO SYSTEM MUTED' : 'KONJO AUDITORY LINK'}
+                </span>
+                {!isMuted && (
+                  <motion.span 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[5px] tracking-[0.2em] text-white/10 uppercase mt-1.5"
+                  >
+                    Processing stream signal...
+                  </motion.span>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
@@ -511,6 +562,16 @@ const DynamicCalendar = ({ schedules, isAdmin, onAdd, onDelete }: { schedules: a
  * Media Renderer Component
  */
 const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-referrer", controls = false }: { url: string | undefined | null, type?: 'image' | 'video', className?: string, alt?: string, referrerPolicy?: any, controls?: boolean }) => {
+  const [isMediaLoaded, setIsMediaLoaded] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (isMediaLoaded) {
+      const timer = setTimeout(() => setIsReady(true), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [isMediaLoaded]);
+
   if (!url) return null;
   
   const isYouTube = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('shorts/');
@@ -527,25 +588,62 @@ const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-re
     const id = getYouTubeId(url);
     if (id) {
       return (
-        <iframe 
-          src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}${controls ? '&controls=1' : '&controls=0'}&modestbranding=1&rel=0&iv_load_policy=3&showinfo=0`} 
-          className={`${className} ${!controls ? 'pointer-events-none' : ''}`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          title={alt}
-        />
+        <div className={`relative ${className} overflow-hidden bg-black flex items-center justify-center`}>
+          {!isReady && (
+            <div className="absolute inset-0 z-20 bg-black flex flex-col items-center justify-center gap-6 transition-opacity duration-700">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 border-[0.5px] border-white/5" />
+                <motion.div 
+                  className="absolute inset-0 border-t border-neon"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-1 h-1 bg-neon shadow-[0_0_10px_rgba(0,255,153,0.5)]" />
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[7px] tracking-[0.6em] text-neon/60 uppercase font-black italic">
+                  Konjo Archive
+                </span>
+                <span className="text-[5px] tracking-[0.3em] text-white/20 uppercase">
+                  Establishing secure visual link...
+                </span>
+              </div>
+            </div>
+          )}
+          <iframe 
+            src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}${controls ? '&controls=1' : '&controls=0'}&modestbranding=1&rel=0&iv_load_policy=3&showinfo=0&enablejsapi=1`} 
+            className={`w-full h-full transition-all duration-[2000ms] ease-out ${isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-110'} ${!controls ? 'pointer-events-none' : ''}`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            title={alt}
+            onLoad={() => setIsMediaLoaded(true)}
+          />
+        </div>
       );
     }
     return (
-      <video 
-        src={url} 
-        autoPlay 
-        muted={!controls} 
-        loop 
-        playsInline 
-        controls={controls}
-        className={`${className} object-cover`}
-      />
+      <div className={`relative ${className} overflow-hidden bg-black flex items-center justify-center`}>
+        {!isReady && (
+          <div className="absolute inset-0 z-20 bg-black flex flex-col items-center justify-center gap-4 transition-opacity duration-700">
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 border border-white/5 animate-pulse" />
+              <div className="absolute inset-1 border-b border-neon/50 animate-bounce" />
+            </div>
+          </div>
+        )}
+        <video 
+          src={url} 
+          autoPlay 
+          muted={!controls} 
+          loop 
+          playsInline 
+          controls={controls}
+          className={`w-full h-full object-cover transition-all duration-[2000ms] ease-out ${isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-110'}`}
+          onLoadedData={() => setIsMediaLoaded(true)}
+        />
+      </div>
     );
   }
   return (
@@ -870,7 +968,7 @@ export default function App() {
       )}
 
       {/* Background Music */}
-      <BackgroundMusic url={siteContent.bgMusicUrl} />
+      <BackgroundMusic url={siteContent.bgMusicUrl} isAdmin={isAdmin} />
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-[90] bg-black/70 backdrop-blur-xl border-b border-white/5">
@@ -1183,7 +1281,7 @@ export default function App() {
                         {isImgurAlbum ? (
                           <p className="text-[8px] text-red-500 uppercase tracking-tight">앨범 링크 불가</p>
                         ) : (
-                          <p className="text-[8px] text-white/30 tracking-tight">Cover/Thumbnail image</p>
+                          <p className="text-[7px] text-white/20 tracking-wider uppercase mt-1">※ Instagram links are not supported for display. Use direct links (Imgur, etc).</p>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -1563,6 +1661,7 @@ export default function App() {
                           className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
                           placeholder="https://www.youtube.com/watch?v=..."
                         />
+                        <p className="text-[7px] text-white/20 tracking-wider uppercase">※ Instagram links are not supported for audio. Use YouTube.</p>
                       </div>
                     </div>
                   </div>
