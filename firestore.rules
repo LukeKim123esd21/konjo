@@ -65,12 +65,11 @@ service cloud.firestore {
           && data.heroTitle is string && data.heroTitle.size() <= 200
           && data.heroDesc is string && data.heroDesc.size() <= 2000
           && data.footerText is string && data.footerText.size() <= 200
-          && (data.keys().hasOnly(['heroTitle', 'heroDesc', 'footerText', 'heroMediaUrl', 'heroMediaType']));
+          && (data.keys().hasOnly(['heroTitle', 'heroDesc', 'footerText', 'heroMediaUrl', 'heroMediaType', 'autoResponse']));
     }
 
     function isValidProduct(data) {
       return data.keys().hasAll(['name', 'prices', 'dropDate', 'vipDropDate', 'description', 'image', 'instaLink', 'createdAt'])
-          && data.keys().size() == 8
           && data.name is string && data.name.size() <= 200
           && data.prices is map
           && data.dropDate is string && data.dropDate.size() <= 30
@@ -78,7 +77,8 @@ service cloud.firestore {
           && data.description is string && data.description.size() <= 2000
           && data.image is string && data.image.size() <= 1000
           && data.instaLink is string && data.instaLink.size() <= 1000
-          && data.createdAt is timestamp;
+          && data.createdAt is timestamp
+          && data.keys().size() >= 8;
     }
 
     // --- Collections ---

@@ -649,19 +649,27 @@ export default function App() {
     }
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSaveProduct = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
+      // Clean price strings (remove commas)
+      const cleanKrw = productForm.krw.toString().replace(/[^0-9]/g, '');
+      const cleanUsd = productForm.usd.toString().replace(/[^0-9.]/g, '');
+
       const data = {
         name: productForm.name,
         description: productForm.description,
         image: productForm.image,
         instaLink: productForm.instaLink,
         prices: {
-          krw: productForm.krw,
-          usd: productForm.usd,
-          eur: (Number(productForm.usd) * 0.9).toFixed(0),
-          jpy: (Number(productForm.krw) * 0.11).toFixed(0),
-          cny: (Number(productForm.krw) * 0.0053).toFixed(0),
+          krw: cleanKrw,
+          usd: cleanUsd,
+          eur: (Number(cleanUsd) * 0.9).toFixed(0),
+          jpy: (Number(cleanKrw) * 0.11).toFixed(0),
+          cny: (Number(cleanKrw) * 0.0053).toFixed(0),
         },
         dropDate: productForm.dropDate,
         vipDropDate: productForm.vipDropDate,
@@ -687,7 +695,10 @@ export default function App() {
         vipDropDate: new Date().toISOString().slice(0, 16)
       });
     } catch (e) {
+      console.error("Save Product Error:", e);
       handleFirestoreError(e, OperationType.WRITE, 'products', setAuthError);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1191,10 +1202,14 @@ export default function App() {
 
                       <button 
                         onClick={handleSaveProduct}
-                        disabled={!productForm.name || !productForm.image}
-                        className="w-full bg-neon text-black h-14 text-[10px] font-black tracking-[0.5em] hover:bg-white transition-all disabled:opacity-30"
+                        disabled={!productForm.name || !productForm.image || isSaving}
+                        className="w-full bg-neon text-black h-14 text-[10px] font-black tracking-[0.5em] hover:bg-white transition-all disabled:opacity-30 flex items-center justify-center gap-4"
                       >
-                        {editingProduct ? 'UPDATE PRODUCT ARCHIVE' : 'BRING TO ARCHIVE'}
+                        {isSaving ? (
+                          <div className="w-4 h-4 border-2 border-black/20 border-t-black animate-spin rounded-full" />
+                        ) : (
+                          editingProduct ? 'UPDATE PRODUCT ARCHIVE' : 'BRING TO ARCHIVE'
+                        )}
                       </button>
                     </div>
                   </div>
