@@ -1000,7 +1000,7 @@ export default function App() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="font-black tracking-[0.5em] md:tracking-[0.7em] text-white cursor-pointer flex flex-col items-center" 
-              onClick={() => setPage('home')}
+              onClick={() => window.location.reload()}
             >
               {siteContent.logoImageUrl ? (
                 <img 
@@ -1285,7 +1285,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="px-4 md:px-10 py-10"
+              className="px-4 md:px-10 pt-28 md:pt-36 pb-20"
             >
               <div className="flex justify-between items-center mb-6 md:mb-10">
                 <h2 className="text-xl md:text-3xl font-light tracking-[0.3em] md:tracking-[0.5em] uppercase text-white">Archive</h2>
@@ -1427,7 +1427,7 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="px-10 py-24"
+              className="px-6 md:px-10 pt-28 md:pt-36 pb-24"
             >
               <div className="mb-24 flex justify-between items-end">
                 <div className="space-y-4">
@@ -1617,7 +1617,7 @@ export default function App() {
               key="booking"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="max-w-7xl mx-auto py-20 md:py-32 px-4 md:px-10"
+              className="max-w-7xl mx-auto pt-28 md:pt-36 pb-20 md:pb-32 px-4 md:px-10"
             >
               <div className="text-center mb-20 space-y-6">
                 <h2 className="text-4xl tracking-[0.5em] text-white font-light uppercase">{TRANSLATIONS[locale].reservation}</h2>
