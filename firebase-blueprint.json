@@ -34,7 +34,9 @@
         "heroDesc": { "type": "string" },
         "heroMediaUrl": { "type": "string" },
         "heroMediaType": { "type": "string", "enum": ["image", "video"] },
-        "footerText": { "type": "string" }
+        "footerText": { "type": "string" },
+        "awards": { "type": "string" },
+        "autoResponse": { "type": "string" }
       }
     },
     "Schedule": {

@@ -65,7 +65,7 @@ service cloud.firestore {
           && data.heroTitle is string && data.heroTitle.size() <= 200
           && data.heroDesc is string && data.heroDesc.size() <= 2000
           && data.footerText is string && data.footerText.size() <= 200
-          && (data.keys().hasOnly(['heroTitle', 'heroDesc', 'footerText', 'heroMediaUrl', 'heroMediaType', 'autoResponse']));
+          && (data.keys().hasOnly(['heroTitle', 'heroDesc', 'footerText', 'heroMediaUrl', 'heroMediaType', 'autoResponse', 'awards']));
     }
 
     function isValidProduct(data) {

@@ -13,7 +13,7 @@ import {
   Instagram, MessageCircle, Send, Globe, 
   Lock, Clock, ExternalLink, ShieldCheck,
   Camera, Calendar, ShoppingBag, Settings, X, ChevronRight, ChevronLeft, Plus, Trash2,
-  ArrowRight, LogOut, User as UserIcon, Play, Video
+  ArrowRight, LogOut, User as UserIcon, Play, Video, FileEdit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, signIn, logout, syncUserProfile, UserProfile, db } from './lib/firebase';
@@ -268,7 +268,7 @@ const FloatingConsultation = () => {
 /**
  * Drop Card Component
  */
-const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete }: { product: any, locale: string, userStatus: string, isAdmin: boolean, onEdit?: (p: any) => void, onDelete?: (id: string) => void }) => {
+const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete, onImageClick }: { product: any, locale: string, userStatus: string, isAdmin: boolean, onEdit?: (p: any) => void, onDelete?: (id: string) => void, onImageClick?: (url: string) => void }) => {
   const [timeLeft, setTimeLeft] = useState("");
   const [isLive, setIsLive] = useState(false);
   const isVIP = userStatus === 'VIP';
@@ -305,66 +305,65 @@ const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete }: { 
       viewport={{ once: true }}
     >
       {isVIP && (
-        <div className="absolute top-6 left-6 z-10 flex items-center gap-2 bg-neon text-black px-3 py-1 text-[9px] font-black tracking-widest">
-          <ShieldCheck size={12} /> VIP EARLY ACCESS
+        <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 flex items-center gap-2 bg-neon text-black px-2 py-1 text-[7px] md:text-[9px] font-black tracking-widest">
+          <ShieldCheck size={10} className="md:w-[12px]" /> VIP EARLY
         </div>
       )}
       
       {isAdmin && (
-        <div className="absolute top-6 right-6 z-10 flex gap-2">
+        <div className="absolute top-2 right-2 md:top-4 md:right-4 z-10 flex gap-1 md:gap-2">
           <button 
             onClick={() => onEdit?.(product)}
-            className="p-2 bg-black/60 text-neon hover:bg-neon hover:text-black transition-all border border-neon/30"
+            className="p-1.5 md:p-2 bg-black/60 text-neon hover:bg-neon hover:text-black transition-all border border-neon/30"
           >
-            <Settings size={14} />
+            <Settings size={12} className="md:w-[14px]" />
           </button>
           <button 
              onClick={() => onDelete?.(product.id)}
-             className="p-2 bg-black/60 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
+             className="p-1.5 md:p-2 bg-black/60 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} className="md:w-[14px]" />
           </button>
         </div>
       )}
 
-      <div className="aspect-[3/4] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700">
-        <img 
-          src={product.image} 
+      <div 
+        className="aspect-[1/1] md:aspect-[3/4] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700 cursor-zoom-in"
+        onClick={() => onImageClick?.(product.image)}
+      >
+        <MediaRenderer 
+          url={product.image} 
           alt={product.name} 
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1594322436404-5a0526db4d13?q=80&w=1000&auto=format&fit=crop";
-          }}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
         />
       </div>
-      <div className="p-8 space-y-6">
-        <div className="flex justify-between items-start">
-          <h3 className="text-xl text-white font-light tracking-tighter leading-tight w-2/3">{product.name}</h3>
-          <p className="text-neon font-bold text-lg leading-none">
+      <div className="p-3 md:p-5 lg:p-6 space-y-3 md:space-y-4 lg:space-y-6">
+        <div className="flex justify-between items-start gap-2">
+          <h3 className="text-[10px] md:text-xs lg:text-sm text-white font-light tracking-tighter leading-tight w-2/3 truncate md:whitespace-normal md:line-clamp-2">{product.name}</h3>
+          <p className="text-neon font-bold text-[9px] md:text-xs lg:text-sm leading-none whitespace-nowrap">
             {currency}{product.prices?.[rateKey] || "0"}
           </p>
         </div>
 
         {product.description && (
-          <p className="text-[10px] text-offwhite/40 leading-relaxed tracking-widest uppercase line-clamp-3">
+          <p className="hidden md:block text-[9px] lg:text-[10px] text-offwhite/40 leading-relaxed tracking-widest uppercase line-clamp-2 lg:line-clamp-3 font-light">
             {product.description}
           </p>
         )}
 
-        <div className="pt-6 border-t border-white/10 flex flex-col gap-5">
-          <div className="flex items-center gap-3 text-[11px] tracking-[0.2em] text-offwhite/50">
-            <Clock size={14} className="text-neon" /> {timeLeft}
+        <div className="pt-3 md:pt-4 lg:pt-6 border-t border-white/10 flex flex-col gap-3 md:gap-5">
+          <div className="flex items-center gap-2 md:gap-3 text-[7px] md:text-[9px] lg:text-[11px] tracking-[0.2em] text-offwhite/50 uppercase">
+            <Clock size={10} className="text-neon md:w-3 md:h-3 lg:w-3.5 lg:h-3.5" /> {timeLeft}
           </div>
           <motion.button 
             whileHover={isLive ? { scale: 1.02 } : {}}
             whileTap={isLive ? { scale: 0.98 } : {}}
             disabled={!isLive}
             onClick={() => window.open(product.instaLink, '_blank')}
-            className={`w-full py-5 text-[10px] tracking-[0.4em] font-bold transition-all
+            className={`w-full py-2.5 md:py-4 lg:py-5 text-[8px] md:text-[9px] lg:text-[10px] tracking-[0.2em] md:tracking-[0.4em] font-bold transition-all
               ${isLive ? 'bg-neon text-black hover:bg-white' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
           >
-            {isLive ? 'PURCHASE ON INSTAGRAM' : 'COMING SOON'}
+            {isLive ? 'RELEASED' : 'PENDING'}
           </motion.button>
         </div>
       </div>
@@ -406,29 +405,32 @@ const DynamicCalendar = ({ schedules, isAdmin, onAdd, onDelete }: { schedules: a
       
       <div className="grid grid-cols-7 gap-1 text-center">
         {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-          <div key={d} className="text-[10px] text-white/20 mb-4 tracking-tighter">{d}</div>
+          <div key={d} className="text-[10px] text-white/50 mb-4 tracking-[0.2em] font-bold">{d}</div>
         ))}
         {days.map((d, i) => (
           <div 
             key={i} 
             onClick={() => d && isAdmin && onAdd(d.dateStr)}
-            className={`aspect-square border border-white/5 p-2 flex flex-col items-start gap-1 transition-all relative
+            className={`min-h-[100px] md:min-h-[140px] border border-white/5 p-2 flex flex-col items-start gap-1 transition-all relative
               ${d ? 'hover:bg-white/5' : 'opacity-0'} 
+              ${d && d.daySchedules.length > 0 ? 'bg-neon/5 border-neon/10' : ''}
               ${d && isAdmin ? 'cursor-pointer hover:border-neon/30' : ''}`}
           >
             {d && (
               <>
-                <span className={`text-[10px] ${d.daySchedules.length > 0 ? 'text-neon' : 'text-white/30'}`}>
+                <span className={`text-[10px] md:text-xs font-bold ${d.daySchedules.length > 0 ? 'text-neon' : 'text-white/30'}`}>
                   {d.day}
                 </span>
-                <div className="flex flex-col gap-1 w-full">
+                <div className="flex flex-col gap-1.5 w-full mt-1">
                   {d.daySchedules.map((s, idx) => (
-                    <div key={idx} className="group relative flex items-center justify-between bg-neon/10 px-1 py-0.5 rounded-[2px]">
-                      <span className="text-[8px] text-neon truncate max-w-[80%] uppercase tracking-tighter">{s.title}</span>
+                    <div key={idx} className="group relative flex items-center justify-between bg-neon text-black px-1.5 py-1 rounded-[1px] shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
+                      <span className="text-[8px] md:text-[10px] font-black truncate w-full uppercase tracking-tighter">
+                        {s.title === 'BOOKED' || s.title === 'RESERVED' ? 'RESERVED' : s.title}
+                      </span>
                       {isAdmin && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:scale-110 transition-all"
+                          className="absolute -right-1 -top-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                         >
                           <X size={8} />
                         </button>
@@ -448,18 +450,28 @@ const DynamicCalendar = ({ schedules, isAdmin, onAdd, onDelete }: { schedules: a
 /**
  * Media Renderer Component
  */
-const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-referrer", controls = false }: { url: string | undefined | null, type: 'image' | 'video', className?: string, alt?: string, referrerPolicy?: any, controls?: boolean }) => {
+const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-referrer", controls = false }: { url: string | undefined | null, type?: 'image' | 'video', className?: string, alt?: string, referrerPolicy?: any, controls?: boolean }) => {
   if (!url) return null;
   
-  if (type === 'video') {
-    // Basic YouTube support
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      const id = url.includes('youtu.be') ? url.split('/').pop() : url.split('v=')[1]?.split('&')[0];
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('shorts/');
+  const isVideo = type === 'video' || isYouTube || url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.webm');
+
+  if (isVideo) {
+    // Robust YouTube support
+    const getYouTubeId = (url: string) => {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    const id = getYouTubeId(url);
+    if (id) {
       return (
         <iframe 
-          src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}${controls ? '&controls=1' : '&controls=0'}&modestbranding=1`} 
+          src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}${controls ? '&controls=1' : '&controls=0'}&modestbranding=1&rel=0&iv_load_policy=3&showinfo=0`} 
           className={`${className} ${!controls ? 'pointer-events-none' : ''}`}
-          allow="autoplay; encrypted-media"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
           title={alt}
         />
       );
@@ -501,6 +513,7 @@ export default function App() {
   const [siteContent, setSiteContent] = useState<any>({
     heroTitle: "KONJO",
     heroDesc: "Premium Tattoo Artistry & Conceptual Garments Archive.",
+    awards: "2024 SEOUL TATTOO CONVENTION GOLD\n2023 PARIS ART EXPO FEATURED\nGLOBAL CREATIVE DIRECTOR\nCONCEPTUAL GARMENTS DESIGNER\nBLACKWORK SPECIALIST\nSEOUL FASHION WEEK COLLAB\nWORLD TATTOO TOUR 2022\nART BASEL MIAMI EXHIBITOR\nMASTER OF MODERN TATTOOING\nCONVICTION THROUGH INK",
     heroMediaUrl: "https://images.unsplash.com/photo-1590201772372-897d0f338600?auto=format&fit=crop&q=80",
     heroMediaType: "image",
     footerText: "QUIET LUXURY, LOUD IMPACT."
@@ -884,16 +897,16 @@ export default function App() {
         </div>
 
         {/* Mobile Sub-Navigation Bar */}
-        <div className="md:hidden flex justify-center gap-0 border-t border-white/5 bg-black/40">
+        <div className="md:hidden flex justify-center gap-0 border-t border-white/5 bg-black/80 backdrop-blur-md">
           {['portfolio', 'drop', 'booking'].map((item) => (
             <button 
               key={item}
               onClick={() => setPage(item)} 
-              className={`flex-1 py-3 text-[9px] tracking-[0.2em] uppercase transition-all ${page === item ? 'text-neon bg-neon/5' : 'text-offwhite/30 hover:text-offwhite'}`}
+              className={`flex-1 py-4 text-[10px] tracking-[0.2em] font-bold uppercase transition-all flex flex-col items-center gap-1 ${page === item ? 'text-neon bg-neon/10' : 'text-offwhite/40 hover:text-offwhite'}`}
             >
               {TRANSLATIONS[locale][item]}
               {page === item && (
-                <motion.div layoutId="mobile-nav-mark" className="h-[1px] bg-neon mx-auto w-4 mt-1" />
+                <motion.div layoutId="mobile-nav-mark" className="h-[2px] bg-neon w-6" />
               )}
             </button>
           ))}
@@ -909,75 +922,136 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="h-[90vh] flex flex-col justify-center px-10 relative overflow-hidden"
+              className="min-h-[90vh] flex flex-col justify-center px-6 md:px-10 py-20 relative overflow-hidden"
             >
-              {/* Hero Media Background */}
-              <div className="absolute inset-0 z-0 overflow-hidden opacity-30 grayscale hover:grayscale-0 transition-all duration-1000">
-                <MediaRenderer 
-                  url={siteContent.heroMediaUrl} 
-                  type={siteContent.heroMediaType || 'image'} 
-                  className="w-full h-full object-cover"
-                  alt="Hero Background"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-              </div>
-
-              <div className="relative z-10">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle,rgba(204,255,0,0.06)_0%,rgba(0,0,0,0)_70%)] pointer-events-none" />
-                <motion.h2 
-                  initial={{ letterSpacing: '0.2em', opacity: 0 }}
-                  animate={{ letterSpacing: '-0.05em', opacity: 0.9 }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                  className="text-[18vw] font-black leading-none text-white select-none whitespace-nowrap uppercase italic"
-                >
-                  {siteContent.heroTitle}<span className="text-neon">.</span>
-                </motion.h2>
-                <div className="flex justify-between items-end mt-10">
-                  <motion.p 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="max-w-md text-[10px] text-offwhite/40 leading-loose tracking-[0.2em] uppercase font-light"
+              <div className="relative z-10 w-full max-w-7xl mx-auto space-y-12 md:space-y-24">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle,rgba(204,255,0,0.03)_0%,rgba(0,0,0,0)_70%)] pointer-events-none" />
+                
+                {/* Main Title Area */}
+                <div className="relative">
+                  <motion.h2 
+                    initial={{ letterSpacing: '0.4em', opacity: 0, y: 20 }}
+                    animate={{ letterSpacing: '0.1em', opacity: 1, y: 0 }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                    className="text-[12vw] md:text-[14vw] font-black leading-none text-white select-none whitespace-nowrap uppercase italic"
                   >
-                    {(siteContent?.heroDesc || "").split('\n').map((line: string, i: number) => (
-                      <React.Fragment key={i}>{line}<br/></React.Fragment>
-                    ))}
-                  </motion.p>
-                  <div className="flex flex-col items-end gap-6">
-                    {isAdmin && (
-                      <div className="flex gap-4">
-                         <button 
-                          onClick={() => {
-                            const url = prompt("Hero Media URL:", siteContent.heroMediaUrl);
-                            const type = prompt("Type (image/video):", siteContent.heroMediaType || 'image');
-                            if (url && (type === 'image' || type === 'video')) {
-                              handleUpdateContent({ heroMediaUrl: url, heroMediaType: type });
-                            }
-                          }}
-                          className="text-[8px] text-neon/40 hover:text-neon transition-colors tracking-widest border border-neon/20 px-2 py-1 uppercase"
-                        >
-                          EDIT MEDIA
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const h = prompt("Title:", siteContent.heroTitle);
-                            const d = prompt("Description:", siteContent.heroDesc);
-                            if (h !== null && d !== null) handleUpdateContent({ heroTitle: h, heroDesc: d });
-                          }}
-                          className="text-[8px] text-neon/40 hover:text-neon transition-colors tracking-widest border border-neon/20 px-2 py-1 uppercase"
-                        >
-                          EDIT TEXT
-                        </button>
+                    {siteContent.heroTitle}<span className="text-neon">.</span>
+                  </motion.h2>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: '100%' }}
+                    transition={{ delay: 0.8, duration: 1 }}
+                    className="h-[1px] bg-white/10 mt-4 md:mt-8"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-20 items-start">
+                  {/* Left Column: Awards & Career */}
+                  <div className="md:col-span-12 lg:col-span-4 order-1 lg:order-1">
+                    <motion.div 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 1 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-[1px] w-8 bg-neon" />
+                        <span className="text-[10px] tracking-[0.4em] font-black text-neon uppercase italic">Accreditation & Archive</span>
                       </div>
-                    )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-10 gap-y-2 max-h-[300px] lg:max-h-none overflow-y-auto pr-4 custom-scrollbar lg:overflow-visible">
+                        {(siteContent?.awards || "").split('\n').map((line: string, i: number) => (
+                          <motion.p 
+                            key={i} 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.5 }}
+                            whileHover={{ opacity: 1, x: 5, color: '#ccff00' }}
+                            transition={{ delay: 1.2 + i * 0.05 }}
+                            className="text-[9px] md:text-[10px] lg:text-[11px] text-white tracking-[0.15em] uppercase font-light border-l border-white/5 pl-4 transition-all cursor-default whitespace-nowrap overflow-hidden text-ellipsis"
+                          >
+                            {line}
+                          </motion.p>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  {/* Right Column: Visual & Desc */}
+                  <div className="md:col-span-12 lg:col-span-8 space-y-12 order-2 lg:order-2">
+                    <div className="flex flex-col md:flex-row lg:flex-row gap-12 items-start">
+                      <div className="flex-1 space-y-8">
+                        <motion.p 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.6 }}
+                          className="max-w-xl text-[10px] md:text-[12px] lg:text-[13px] text-offwhite/50 leading-relaxed md:leading-loose tracking-[0.15em] md:tracking-[0.2em] uppercase font-light"
+                        >
+                          {(siteContent?.heroDesc || "").split('\n').map((line: string, i: number) => (
+                            <React.Fragment key={i}>{line}<br/></React.Fragment>
+                          ))}
+                        </motion.p>
+
+                        {/* Featured Media */}
+                        <motion.div 
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 1.4 }}
+                          className="relative w-full aspect-video md:aspect-[21/9] bg-surface border border-white/5 group overflow-hidden"
+                        >
+                          <MediaRenderer 
+                            url={siteContent.heroMediaUrl} 
+                            type={siteContent.heroMediaType || 'image'} 
+                            className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+                          <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                             <div className="w-1 h-1 bg-neon rounded-full animate-ping" />
+                             <span className="text-[7px] tracking-[.4em] font-bold text-white/30 uppercase italic">Spotlight visual</span>
+                          </div>
+                        </motion.div>
+                      </div>
+
+                      {/* Admin Controls */}
+                      {isAdmin && (
+                        <div className="flex flex-row md:flex-col gap-4">
+                          <button 
+                            onClick={() => {
+                              const url = prompt("Hero Media URL:", siteContent.heroMediaUrl);
+                              const type = prompt("Type (image/video):", siteContent.heroMediaType || 'image');
+                              const a = prompt("Awards (Separate by newline):", siteContent.awards);
+                              if (url && (type === 'image' || type === 'video')) {
+                                handleUpdateContent({ heroMediaUrl: url, heroMediaType: type, awards: a });
+                              }
+                            }}
+                            className="p-3 border border-neon/20 text-neon/40 hover:text-neon transition-all hover:bg-neon/5"
+                            title="Edit Media & Awards"
+                          >
+                            <Settings size={14} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const h = prompt("Title:", siteContent.heroTitle);
+                              const d = prompt("Description:", siteContent.heroDesc);
+                              const a = prompt("Awards:", siteContent.awards);
+                              if (h !== null && d !== null) handleUpdateContent({ heroTitle: h, heroDesc: d, awards: a });
+                            }}
+                            className="p-3 border border-neon/20 text-neon/40 hover:text-neon transition-all hover:bg-neon/5"
+                            title="Edit Title & Description"
+                          >
+                            <FileEdit size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
                     <motion.button 
                       onClick={() => setPage('portfolio')} 
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.8 }}
-                      className="group flex items-center gap-4 text-[10px] tracking-[0.5em] text-white hover:text-neon transition-colors"
+                      transition={{ delay: 1.6 }}
+                      className="group flex items-center gap-6 text-[10px] tracking-[0.5em] text-white hover:text-neon transition-all"
                     >
-                      {TRANSLATIONS[locale].explore} <ChevronRight size={14} className="group-hover:translate-x-2 transition-transform text-neon" />
+                      {TRANSLATIONS[locale].explore} <ChevronRight size={14} className="group-hover:translate-x-3 transition-transform text-neon" />
                     </motion.button>
                   </div>
                 </div>
@@ -1082,7 +1156,7 @@ export default function App() {
                 </motion.div>
               )}
 
-              <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-1 md:gap-4">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1 md:gap-3">
                 {portfolioItems.map((item, i) => (
                   <motion.div 
                     key={item.id} 
@@ -1281,7 +1355,7 @@ export default function App() {
                 </motion.div>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div className="grid grid-cols-3 gap-1 md:gap-4 lg:gap-8">
                 {products.length > 0 ? (
                   products.map(product => (
                     <DropCard 
@@ -1290,6 +1364,7 @@ export default function App() {
                       locale={locale} 
                       userStatus={userStatus} 
                       isAdmin={isAdmin}
+                      onImageClick={(url) => setSelectedImg({ url, type: 'image' })}
                       onEdit={(p) => {
                         setEditingProduct(p);
                         setProductForm({
@@ -1322,7 +1397,7 @@ export default function App() {
               key="booking"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="max-w-5xl mx-auto py-32 px-10"
+              className="max-w-7xl mx-auto py-20 md:py-32 px-4 md:px-10"
             >
               <div className="text-center mb-20 space-y-6">
                 <h2 className="text-4xl tracking-[0.5em] text-white font-light uppercase">{TRANSLATIONS[locale].reservation}</h2>
@@ -1395,12 +1470,13 @@ export default function App() {
                     <h4 className="text-neon text-[10px] tracking-[0.3em] font-bold uppercase italic">Hero Media</h4>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] tracking-widest text-white/40">MEDIA URL</label>
+                        <label className="text-[10px] tracking-widest text-white/40">MEDIA URL (Direct Image or YouTube/MP4)</label>
                         <input 
                           type="text"
                           value={siteContent.heroMediaUrl || ''}
                           onChange={(e) => handleUpdateContent({ heroMediaUrl: e.target.value })}
                           className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
+                          placeholder="https://www.youtube.com/watch?v=..."
                         />
                       </div>
                       <div className="space-y-2">
@@ -1469,13 +1545,14 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full h-full flex items-center justify-center"
+              className="w-full max-w-4xl aspect-video md:h-[80vh] flex items-center justify-center relative shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
             >
               <MediaRenderer 
                 url={selectedImg.url} 
                 type={selectedImg.type} 
                 controls={true}
-                className="max-w-full max-h-full object-contain shadow-2xl" 
+                className="w-full h-full object-contain" 
                 alt="Full View" 
               />
             </motion.div>
