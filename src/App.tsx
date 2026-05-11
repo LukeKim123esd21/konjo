@@ -194,7 +194,7 @@ const TRANSLATIONS: Record<string, any> = {
  * Background Music Component (Hidden YouTube Player)
  */
 const BackgroundMusic = ({ url, isAdmin }: { url: string | undefined | null, isAdmin?: boolean }) => {
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   
   if (!url) {
