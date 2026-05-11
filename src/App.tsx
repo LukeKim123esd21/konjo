@@ -13,7 +13,7 @@ import {
   Instagram, MessageCircle, Send, Globe, 
   Lock, Clock, ExternalLink, ShieldCheck,
   Camera, Calendar, ShoppingBag, Settings, X, ChevronRight, ChevronLeft, Plus, Trash2,
-  ArrowRight, LogOut, User as UserIcon, Play, Video, FileEdit
+  ArrowRight, LogOut, User as UserIcon, Play, Video, FileEdit, Music, Volume2, VolumeX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, signIn, logout, syncUserProfile, UserProfile, db } from './lib/firebase';
@@ -188,6 +188,66 @@ const TRANSLATIONS: Record<string, any> = {
     vipWhitelist: 'VIP 白名单',
     autoResponse: '自动回复模板',
   },
+};
+
+/**
+ * Background Music Component (Hidden YouTube Player)
+ */
+const BackgroundMusic = ({ url }: { url: string | undefined | null }) => {
+  const [isMuted, setIsMuted] = useState(true);
+  
+  if (!url) return null;
+
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const id = getYouTubeId(url);
+  if (!id) return null;
+
+  return (
+    <div className="fixed top-8 right-32 md:right-44 z-[100] flex items-center">
+      <div className="hidden pointer-events-none opacity-0 w-0 h-0 overflow-hidden">
+        <iframe 
+          src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${id}`}
+          allow="autoplay; encrypted-media"
+          title="Background Music"
+        />
+      </div>
+      
+      <button 
+        onClick={() => setIsMuted(!isMuted)}
+        className="flex items-center gap-3 group px-4 py-2 hover:bg-white/5 transition-all rounded-full border border-transparent hover:border-white/10"
+      >
+        <div className="relative flex items-center justify-center w-4 h-4">
+          {isMuted ? (
+            <VolumeX size={14} className="text-white/20 group-hover:text-neon transition-colors" />
+          ) : (
+            <div className="flex items-end gap-[2px] h-3">
+              {[0, 1, 2].map((i) => (
+                <motion.div 
+                  key={i}
+                  animate={{ height: ["20%", "100%", "20%"] }}
+                  transition={{ 
+                    duration: 0.6, 
+                    repeat: Infinity, 
+                    delay: i * 0.15,
+                    ease: "easeInOut"
+                  }}
+                  className="w-[2px] bg-neon" 
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        <span className={`text-[8px] tracking-[0.4em] uppercase transition-all duration-500 font-bold italic ${!isMuted ? 'text-neon' : 'text-white/20 group-hover:text-white/60'}`}>
+          {isMuted ? 'Sound Off' : 'Konjo Archive On'}
+        </span>
+      </button>
+    </div>
+  );
 };
 
 /**
@@ -516,7 +576,8 @@ export default function App() {
     awards: "2024 SEOUL TATTOO CONVENTION GOLD\n2023 PARIS ART EXPO FEATURED\nGLOBAL CREATIVE DIRECTOR\nCONCEPTUAL GARMENTS DESIGNER\nBLACKWORK SPECIALIST\nSEOUL FASHION WEEK COLLAB\nWORLD TATTOO TOUR 2022\nART BASEL MIAMI EXHIBITOR\nMASTER OF MODERN TATTOOING\nCONVICTION THROUGH INK",
     heroMediaUrl: "https://images.unsplash.com/photo-1590201772372-897d0f338600?auto=format&fit=crop&q=80",
     heroMediaType: "image",
-    footerText: "QUIET LUXURY, LOUD IMPACT."
+    footerText: "QUIET LUXURY, LOUD IMPACT.",
+    bgMusicUrl: ""
   });
   const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
@@ -807,6 +868,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Background Music */}
+      <BackgroundMusic url={siteContent.bgMusicUrl} />
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-[90] bg-black/70 backdrop-blur-xl border-b border-white/5">
@@ -1489,6 +1553,16 @@ export default function App() {
                           <option value="image">IMAGE</option>
                           <option value="video">VIDEO (YouTube / MP4)</option>
                         </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] tracking-widest text-white/40">BACKGROUND MUSIC (YouTube URL)</label>
+                        <input 
+                          type="text"
+                          value={siteContent.bgMusicUrl || ''}
+                          onChange={(e) => handleUpdateContent({ bgMusicUrl: e.target.value })}
+                          className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
+                          placeholder="https://www.youtube.com/watch?v=..."
+                        />
                       </div>
                     </div>
                   </div>
