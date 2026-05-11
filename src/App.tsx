@@ -303,7 +303,7 @@ const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete }: { 
         <div className="flex justify-between items-start">
           <h3 className="text-xl text-white font-light tracking-tighter leading-tight w-2/3">{product.name}</h3>
           <p className="text-neon font-bold text-lg leading-none">
-            {currency}{product.prices[rateKey]}
+            {currency}{product.prices?.[rateKey] || "0"}
           </p>
         </div>
 
@@ -409,7 +409,9 @@ const DynamicCalendar = ({ schedules, isAdmin, onAdd, onDelete }: { schedules: a
 /**
  * Media Renderer Component
  */
-const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-referrer", controls = false }: { url: string, type: 'image' | 'video', className?: string, alt?: string, referrerPolicy?: any, controls?: boolean }) => {
+const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-referrer", controls = false }: { url: string | undefined | null, type: 'image' | 'video', className?: string, alt?: string, referrerPolicy?: any, controls?: boolean }) => {
+  if (!url) return null;
+  
   if (type === 'video') {
     // Basic YouTube support
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
@@ -469,63 +471,75 @@ export default function App() {
   const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
-    // 1. Auth & Profile
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setAuthError(null);
-      if (currentUser) {
-        try {
-          const profile = await syncUserProfile(currentUser);
-          setUserProfile(profile);
-
-          const profileRef = doc(db, 'users', currentUser.uid);
-          const unsubProfile = onSnapshot(profileRef, (d) => {
-            if (d.exists()) {
-              setUserProfile({ uid: d.id, ...d.data() } as UserProfile);
-            }
-          }, (err) => {
-            handleFirestoreError(err, OperationType.GET, `users/${currentUser.uid}`, setAuthError);
-          });
-
-          return () => unsubProfile();
-        } catch (error: any) {
-          console.error("Profile sync error", error);
-          setAuthError(error.message || "Failed to sync user profile");
-        }
-      } else {
-        setUserProfile(null);
-      }
+    // Safety timeout to ensure loading screen resolves
+    const loadingTimeout = setTimeout(() => {
       setLoading(false);
-    });
+    }, 5000);
+
+    // 1. Auth & Profile
+    let unsubscribeAuth: () => void;
+    try {
+      unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+        setUser(currentUser);
+        setAuthError(null);
+        if (currentUser) {
+          try {
+            const profile = await syncUserProfile(currentUser);
+            setUserProfile(profile);
+
+            const profileRef = doc(db, 'users', currentUser.uid);
+            const unsubProfile = onSnapshot(profileRef, (d) => {
+              if (d.exists()) {
+                setUserProfile({ uid: d.id, ...d.data() } as UserProfile);
+              }
+            }, (err) => {
+              handleFirestoreError(err, OperationType.GET, `users/${currentUser.uid}`, setAuthError);
+            });
+          } catch (error: any) {
+            console.error("Profile sync error", error);
+            setAuthError(error.message || "Failed to sync user profile");
+          }
+        } else {
+          setUserProfile(null);
+        }
+        setLoading(false);
+        clearTimeout(loadingTimeout);
+      });
+    } catch (e: any) {
+      console.error("Auth init error", e);
+      setLoading(false);
+      setAuthError("Auth system initialization failed");
+    }
 
     // 2. Portfolio Items
     const qPortfolio = query(collection(db, 'portfolio'), orderBy('createdAt', 'desc'));
     const unsubscribePortfolio = onSnapshot(qPortfolio, (snapshot) => {
       setPortfolioItems(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => handleFirestoreError(err, OperationType.GET, 'portfolio', setAuthError));
 
     // 3. Schedules
     const unsubscribeSchedules = onSnapshot(collection(db, 'schedules'), (snapshot) => {
       setSchedules(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => handleFirestoreError(err, OperationType.GET, 'schedules', setAuthError));
 
     // 4. Site Content (CMS)
     const unsubscribeContent = onSnapshot(doc(db, 'settings', 'content'), (snapshot) => {
-      if (snapshot.exists()) setSiteContent(snapshot.data());
-    });
+      if (snapshot.exists()) setSiteContent((prev: any) => ({ ...prev, ...snapshot.data() }));
+    }, (err) => handleFirestoreError(err, OperationType.GET, 'settings/content', setAuthError));
 
     // 5. Products
     const qProducts = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
     const unsubscribeProducts = onSnapshot(qProducts, (snapshot) => {
       setProducts(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => handleFirestoreError(err, OperationType.GET, 'products', setAuthError));
 
     return () => {
-      unsubscribeAuth();
+      if (unsubscribeAuth) unsubscribeAuth();
       unsubscribePortfolio();
       unsubscribeSchedules();
       unsubscribeContent();
       unsubscribeProducts();
+      clearTimeout(loadingTimeout);
     };
   }, []);
 
@@ -689,8 +703,25 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-black flex items-center justify-center">
-        <div className="w-12 h-[1px] bg-neon animate-pulse" />
+      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center gap-6">
+        <div className="flex flex-col items-center">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: "240px" }}
+            transition={{ duration: 3 }}
+            className="h-[1px] bg-neon shadow-[0_0_10px_rgba(204,255,0,0.8)]"
+          />
+          <span className="text-neon text-[8px] tracking-[0.8em] font-light mt-4 uppercase animate-pulse">Initializing Archive</span>
+        </div>
+        {authError && (
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-red-500 text-[10px] tracking-widest uppercase bg-red-500/10 px-4 py-2 border border-red-500/30"
+          >
+            Connection issue: {authError}
+          </motion.p>
+        )}
       </div>
     );
   }
@@ -832,7 +863,7 @@ export default function App() {
                     transition={{ delay: 0.5 }}
                     className="max-w-md text-[10px] text-offwhite/40 leading-loose tracking-[0.2em] uppercase font-light"
                   >
-                    {siteContent.heroDesc.split('\n').map((line: string, i: number) => (
+                    {(siteContent?.heroDesc || "").split('\n').map((line: string, i: number) => (
                       <React.Fragment key={i}>{line}<br/></React.Fragment>
                     ))}
                   </motion.p>
@@ -1182,14 +1213,14 @@ export default function App() {
                       onEdit={(p) => {
                         setEditingProduct(p);
                         setProductForm({
-                          name: p.name,
+                          name: p.name || '',
                           description: p.description || '',
-                          image: p.image,
-                          instaLink: p.instaLink,
-                          krw: p.prices.krw,
-                          usd: p.prices.usd,
-                          dropDate: p.dropDate,
-                          vipDropDate: p.vipDropDate
+                          image: p.image || '',
+                          instaLink: p.instaLink || INSTAGRAM_URL,
+                          krw: p.prices?.krw || '',
+                          usd: p.prices?.usd || '',
+                          dropDate: p.dropDate || new Date().toISOString().slice(0, 16),
+                          vipDropDate: p.vipDropDate || new Date().toISOString().slice(0, 16)
                         });
                         setIsAddingProduct(true);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1264,7 +1295,7 @@ export default function App() {
                         <label className="text-[10px] tracking-widest text-white/40">HERO TITLE</label>
                         <input 
                           type="text"
-                          value={siteContent.heroTitle}
+                          value={siteContent.heroTitle || ''}
                           onChange={(e) => handleUpdateContent({ heroTitle: e.target.value })}
                           className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
                         />
@@ -1272,7 +1303,7 @@ export default function App() {
                       <div className="space-y-2">
                         <label className="text-[10px] tracking-widest text-white/40">HERO DESCRIPTION</label>
                         <textarea 
-                          value={siteContent.heroDesc}
+                          value={siteContent.heroDesc || ''}
                           onChange={(e) => handleUpdateContent({ heroDesc: e.target.value })}
                           className="w-full bg-black border border-white/10 p-4 text-xs text-white focus:border-neon outline-none h-24"
                         />
@@ -1287,7 +1318,7 @@ export default function App() {
                         <label className="text-[10px] tracking-widest text-white/40">MEDIA URL</label>
                         <input 
                           type="text"
-                          value={siteContent.heroMediaUrl}
+                          value={siteContent.heroMediaUrl || ''}
                           onChange={(e) => handleUpdateContent({ heroMediaUrl: e.target.value })}
                           className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
                         />
