@@ -796,81 +796,107 @@ export default function App() {
       )}
 
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-[90] flex justify-between items-center px-10 py-8 bg-black/80 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center gap-16">
-          <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-2xl font-black tracking-[0.7em] text-white cursor-pointer flex flex-col items-center" 
-            onClick={() => setPage('home')}
-          >
-            <span className="text-lg leading-none">根性</span>
-            <span className="text-[10px] tracking-[0.5em] mt-1 font-light opacity-60">KONJO</span>
-          </motion.h1>
-          <div className="hidden md:flex gap-10 text-[10px] tracking-[0.3em] uppercase text-offwhite/40">
-            {['portfolio', 'drop', 'booking'].map((item) => (
-              <button 
-                key={item}
-                onClick={() => setPage(item)} 
-                className={`hover:text-neon transition-colors relative py-1 ${page === item && 'text-neon'}`}
-              >
-                {TRANSLATIONS[locale][item]}
-                {page === item && (
-                  <motion.div layoutId="nav-underline" className="absolute bottom-0 left-0 w-full h-[1px] bg-neon" />
-                )}
-              </button>
-            ))}
+      <nav className="fixed top-0 w-full z-[90] bg-black/70 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 md:px-10 h-20 md:h-24 flex justify-between items-center">
+          <div className="flex items-center gap-6 md:gap-16">
+            <motion.h1 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-xl md:text-2xl font-black tracking-[0.5em] md:tracking-[0.7em] text-white cursor-pointer flex flex-col items-center" 
+              onClick={() => setPage('home')}
+            >
+              <span className="text-lg md:text-xl leading-none">根性</span>
+              <span className="text-[8px] md:text-[10px] tracking-[0.4em] mt-1 font-light opacity-60">KONJO</span>
+            </motion.h1>
+            
+            {/* Desktop Menu */}
+            <div className="hidden md:flex gap-10 text-[10px] tracking-[0.3em] uppercase text-offwhite/40">
+              {['portfolio', 'drop', 'booking'].map((item) => (
+                <button 
+                  key={item}
+                  onClick={() => setPage(item)} 
+                  className={`hover:text-neon transition-colors relative py-1 ${page === item && 'text-neon'}`}
+                >
+                  {TRANSLATIONS[locale][item]}
+                  {page === item && (
+                    <motion.div layoutId="nav-underline" className="absolute bottom-0 left-0 w-full h-[1px] bg-neon" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 md:gap-8">
+            {/* Mobile simplified status */}
+            <div className="hidden sm:block">
+              {user && (
+                <div 
+                  className={`text-[8px] md:text-[9px] px-3 md:px-4 py-1 border transition-all tracking-widest ${userStatus === 'VIP' ? 'border-neon text-neon shadow-[0_0_15px_rgba(204,255,0,0.3)]' : 'border-white/10 text-white/20'}`}
+                >
+                  {userStatus === 'VIP' ? (TRANSLATIONS[locale] as any).vipAccess : (TRANSLATIONS[locale] as any).guestMode}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 md:gap-6">
+              {user ? (
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="hidden lg:block text-[10px] tracking-widest text-offwhite/60">
+                    {user.displayName}
+                  </div>
+                  <button 
+                    onClick={logout}
+                    className="p-2 text-white/20 hover:text-neon transition-colors"
+                    title={(TRANSLATIONS[locale] as any).logout}
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={handleLogin}
+                  className="flex items-center gap-2 text-[8px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] text-neon border border-neon/30 px-3 md:px-6 py-1.5 md:py-2 hover:bg-neon hover:text-black transition-all"
+                >
+                  <UserIcon size={12} md:size={14} /> {(TRANSLATIONS[locale] as any).login}
+                </button>
+              )}
+              
+              <div className="flex items-center gap-1 md:gap-2 border-l border-white/10 pl-4 md:pl-8">
+                <Globe size={12} md:size={14} className="text-neon" />
+                <select 
+                  value={locale} 
+                  onChange={(e) => setLocale(e.target.value)}
+                  className="bg-transparent text-[8px] md:text-[10px] tracking-widest text-offwhite border-none outline-none cursor-pointer uppercase focus:ring-0"
+                >
+                  {Object.keys(LOCALE_SETTINGS).map(lang => (
+                    <option key={lang} value={lang} className="bg-[#121212]">{lang}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {isAdmin && (
+                <button onClick={() => setPage('admin')} className="text-offwhite/20 hover:text-neon transition-colors ml-2">
+                  <Settings size={16} md:size={18} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        
-        <div className="flex items-center gap-8">
-          {user ? (
-            <div className="flex items-center gap-6">
-              <div 
-                className={`text-[9px] px-4 py-1.5 border transition-all tracking-widest ${userStatus === 'VIP' ? 'border-neon text-neon shadow-[0_0_15px_rgba(204,255,0,0.3)]' : 'border-white/10 text-white/20'}`}
-              >
-                {userStatus === 'VIP' ? (TRANSLATIONS[locale] as any).vipAccess : (TRANSLATIONS[locale] as any).guestMode}
-              </div>
-              <div className="flex items-center gap-3 border-l border-white/10 pl-6">
-                <div className="text-[10px] tracking-widest text-offwhite/60">
-                  {user.displayName}
-                </div>
-                <button 
-                  onClick={logout}
-                  className="p-2 text-white/20 hover:text-neon transition-colors"
-                  title={(TRANSLATIONS[locale] as any).logout}
-                >
-                  <LogOut size={14} />
-                </button>
-              </div>
-            </div>
-          ) : (
+
+        {/* Mobile Sub-Navigation Bar */}
+        <div className="md:hidden flex justify-center gap-0 border-t border-white/5 bg-black/40">
+          {['portfolio', 'drop', 'booking'].map((item) => (
             <button 
-              onClick={handleLogin}
-              className="flex items-center gap-3 text-[10px] tracking-[0.3em] text-neon border border-neon/30 px-6 py-2 hover:bg-neon hover:text-black transition-all"
+              key={item}
+              onClick={() => setPage(item)} 
+              className={`flex-1 py-3 text-[9px] tracking-[0.2em] uppercase transition-all ${page === item ? 'text-neon bg-neon/5' : 'text-offwhite/30 hover:text-offwhite'}`}
             >
-              <UserIcon size={14} /> {(TRANSLATIONS[locale] as any).login}
+              {TRANSLATIONS[locale][item]}
+              {page === item && (
+                <motion.div layoutId="mobile-nav-mark" className="h-[1px] bg-neon mx-auto w-4 mt-1" />
+              )}
             </button>
-          )}
-          
-          <div className="flex items-center gap-2 border-l border-white/10 pl-8">
-            <Globe size={14} className="text-neon" />
-            <select 
-              value={locale} 
-              onChange={(e) => setLocale(e.target.value)}
-              className="bg-transparent text-[10px] tracking-widest text-offwhite border-none outline-none cursor-pointer uppercase focus:ring-0"
-            >
-              {Object.keys(LOCALE_SETTINGS).map(lang => (
-                <option key={lang} value={lang} className="bg-[#121212]">{lang}</option>
-              ))}
-            </select>
-          </div>
-          
-          {isAdmin && (
-            <button onClick={() => setPage('admin')} className="text-offwhite/20 hover:text-neon transition-colors">
-              <Settings size={18} />
-            </button>
-          )}
+          ))}
         </div>
       </nav>
 
@@ -965,16 +991,16 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="p-10"
+              className="px-4 md:px-10 py-10"
             >
-              <div className="flex justify-between items-center mb-10">
-                <h2 className="text-3xl font-light tracking-[0.5em] uppercase text-white">Archive</h2>
+              <div className="flex justify-between items-center mb-6 md:mb-10">
+                <h2 className="text-xl md:text-3xl font-light tracking-[0.3em] md:tracking-[0.5em] uppercase text-white">Archive</h2>
                 {isAdmin && (
                   <button 
                     onClick={() => setIsAddingPortfolio(!isAddingPortfolio)}
-                    className={`flex items-center gap-2 px-4 py-2 text-[10px] font-bold tracking-widest transition-colors ${isAddingPortfolio ? 'bg-red-500 text-white' : 'bg-neon text-black hover:bg-white'}`}
+                    className={`flex items-center gap-2 px-3 md:px-4 py-2 text-[8px] md:text-[10px] font-bold tracking-widest transition-colors ${isAddingPortfolio ? 'bg-red-500 text-white' : 'bg-neon text-black hover:bg-white'}`}
                   >
-                    {isAddingPortfolio ? <X size={14} /> : <Plus size={14} />} 
+                    {isAddingPortfolio ? <X size={12} /> : <Plus size={12} />} 
                     {isAddingPortfolio ? 'CANCEL' : TRANSLATIONS[locale].addPortfolio}
                   </button>
                 )}
@@ -984,7 +1010,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-12 p-8 bg-surface border border-neon/20 grid grid-cols-1 md:grid-cols-3 gap-6 items-end"
+                  className="mb-12 p-6 md:p-8 bg-surface border border-neon/20 grid grid-cols-1 md:grid-cols-3 gap-6 items-end"
                 >
                   <div className="space-y-4 col-span-full md:col-span-1">
                     <label className="text-[10px] tracking-widest text-white/40 uppercase">Preview</label>
@@ -1056,14 +1082,14 @@ export default function App() {
                 </motion.div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-1 md:gap-4">
                 {portfolioItems.map((item, i) => (
                   <motion.div 
                     key={item.id} 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.05 }}
-                    className="group relative aspect-[3/4] bg-surface overflow-hidden cursor-pointer"
+                    className="group relative aspect-[1/1] md:aspect-[3/4] bg-surface overflow-hidden cursor-pointer"
                     onClick={() => {
                       if (item.videoUrl) {
                         setSelectedImg({ url: item.videoUrl, type: 'video' });
@@ -1079,18 +1105,18 @@ export default function App() {
                       alt={item.title} 
                     />
                     {item.videoUrl && (
-                      <div className="absolute top-4 right-4 text-neon pointer-events-none drop-shadow-[0_0_8px_rgba(204,255,0,0.5)]">
-                        <Play size={16} fill="currentColor" />
+                      <div className="absolute top-2 right-2 md:top-4 md:right-4 text-neon pointer-events-none drop-shadow-[0_0_8px_rgba(204,255,0,0.5)]">
+                        <Play size={10} className="md:w-4 md:h-4" fill="currentColor" />
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 md:p-8">
                       <div className="flex justify-between items-end">
-                        <p className="text-neon text-[9px] tracking-[0.3em] font-bold uppercase italic">
+                        <p className="text-neon text-[7px] md:text-[9px] tracking-[0.1em] md:tracking-[0.3em] font-bold uppercase italic truncate pr-2">
                           {item.title}
                         </p>
                         {isAdmin && (
                           <button onClick={(e) => handleDeletePortfolio(item.id, e)} className="text-red-500 hover:scale-110 transition-transform">
-                            <Trash2 size={16} />
+                            <Trash2 size={12} className="md:w-4 md:h-4" />
                           </button>
                         )}
                       </div>
