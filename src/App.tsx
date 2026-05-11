@@ -379,11 +379,15 @@ const FloatingConsultation = () => {
 /**
  * Drop Card Component
  */
-const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete, onImageClick }: { product: any, locale: string, userStatus: string, isAdmin: boolean, onEdit?: (p: any) => void, onDelete?: (id: string) => void, onImageClick?: (url: string) => void }) => {
+const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete, onImageClick }: { product: any, locale: string, userStatus: string, isAdmin: boolean, onEdit?: (p: any) => void, onDelete?: (id: string) => void, onImageClick?: (url: string, gallery?: string[]) => void }) => {
   const [timeLeft, setTimeLeft] = useState("");
   const [isLive, setIsLive] = useState(false);
+  const [currentImgIdx, setCurrentImgIdx] = useState(0);
   const isVIP = userStatus === 'VIP';
   const targetDate = new Date(isVIP ? product.vipDropDate : product.dropDate);
+
+  const validImages = (product.images || []).filter((img: string) => img && img.trim() !== '');
+  const displayImages = validImages.length > 0 ? validImages : [product.image];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -440,23 +444,61 @@ const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete, onIm
 
       <div 
         className="aspect-[1/1] md:aspect-[4/5] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700 cursor-zoom-in relative"
-        onClick={() => {
-          if (product.images && product.images.length > 0) {
-            setSelectedImg({ url: product.images[0], type: 'image', gallery: product.images });
-          } else {
-            setSelectedImg({ url: product.image, type: 'image' });
-          }
-        }}
+        onClick={() => onImageClick?.(displayImages[currentImgIdx], displayImages)}
       >
-        <MediaRenderer 
-          url={product.image} 
-          alt={product.name} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
-        />
-        {product.images && product.images.length > 1 && (
-          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[7px] px-1.5 py-0.5 rounded-full flex items-center gap-1">
-            <Camera size={8} /> {product.images.length}
-          </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentImgIdx}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full h-full"
+          >
+            <MediaRenderer 
+              url={displayImages[currentImgIdx]} 
+              alt={product.name} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
+            />
+          </motion.div>
+        </AnimatePresence>
+
+        {displayImages.length > 1 && (
+          <>
+            <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentImgIdx((prev) => (prev - 1 + displayImages.length) % displayImages.length);
+                }}
+                className="p-1 bg-black/40 text-white hover:bg-neon hover:text-black transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentImgIdx((prev) => (prev + 1) % displayImages.length);
+                }}
+                className="p-1 bg-black/40 text-white hover:bg-neon hover:text-black transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+              {displayImages.map((_, idx) => (
+                <div 
+                  key={idx}
+                  className={`w-1 h-1 rounded-full transition-all ${idx === currentImgIdx ? 'bg-neon w-3' : 'bg-white/30'}`}
+                />
+              ))}
+            </div>
+
+            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[7px] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+              <Camera size={8} /> {displayImages.length}
+            </div>
+          </>
         )}
       </div>
       <div className="p-3 md:p-5 lg:p-6 space-y-3 md:space-y-4 lg:space-y-6">
@@ -907,8 +949,8 @@ export default function App() {
       const data = {
         name: productForm.name,
         description: productForm.description,
-        image: productForm.image || (productForm.images && productForm.images[0]) || '',
-        images: productForm.images || [],
+        image: productForm.image || (productForm.images && productForm.images.find(img => img)) || '',
+        images: (productForm.images || []).filter(img => img && img.trim() !== ''),
         instaLink: productForm.instaLink,
         prices: {
           krw: cleanKrw,
@@ -1478,9 +1520,9 @@ export default function App() {
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                     <div className="space-y-6">
                       <div className="aspect-[3/4] bg-black border border-white/10 flex items-center justify-center overflow-hidden relative group">
-                        {(productForm.images && productForm.images.length > 0) ? (
+                        {(productForm.images && productForm.images.find(img => img)) ? (
                           <img 
-                            src={productForm.images[0]} 
+                            src={productForm.images.find(img => img)} 
                             alt="Main Preview" 
                             className="w-full h-full object-cover" 
                             referrerPolicy="no-referrer" 
@@ -1619,7 +1661,7 @@ export default function App() {
 
                       <button 
                         onClick={handleSaveProduct}
-                        disabled={!productForm.name || !productForm.image || isSaving}
+                        disabled={!productForm.name || (!productForm.image && (!productForm.images || productForm.images.filter(img => img).length === 0)) || isSaving}
                         className="w-full bg-neon text-black h-14 text-[10px] font-black tracking-[0.5em] hover:bg-white transition-all disabled:opacity-30 flex items-center justify-center gap-4"
                       >
                         {isSaving ? (
@@ -1642,7 +1684,7 @@ export default function App() {
                       locale={locale} 
                       userStatus={userStatus} 
                       isAdmin={isAdmin}
-                      onImageClick={(url) => setSelectedImg({ url, type: 'image' })}
+                      onImageClick={(url, gallery) => setSelectedImg({ url, type: 'image', gallery })}
                       onEdit={(p) => {
                         setEditingProduct(p);
                         setProductForm({
