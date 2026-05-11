@@ -193,38 +193,77 @@ const TRANSLATIONS: Record<string, any> = {
 /**
  * Floating Consultation Component
  */
-const FloatingConsultation = () => (
-  <div className="fixed bottom-8 right-8 z-[100] flex flex-col gap-4">
-    {[
-      { icon: <Instagram size={22}/>, label: 'Instagram DM', link: INSTAGRAM_URL, color: 'hover:text-neon' },
-      { icon: <MessageCircle size={22}/>, label: 'KakaoTalk', link: "#", color: 'hover:text-[#FEE500]' },
-      { icon: <Send size={22}/>, label: 'Telegram', link: "#", color: 'hover:text-[#0088cc]' },
-      { icon: <MessageCircle size={22}/>, label: 'WeChat', link: "#", color: 'hover:text-[#07C160]' },
-      { icon: <ExternalLink size={22}/>, label: 'Messenger', link: "#", color: 'hover:text-[#0084FF]' },
-    ].map((sns, idx) => (
-      <motion.div 
-        key={idx} 
-        className="group relative flex items-center justify-end"
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.5 + idx * 0.1 }}
-      >
-        <span className="absolute right-16 opacity-0 group-hover:opacity-100 transition-all text-[10px] tracking-widest text-neon bg-black/90 px-3 py-1.5 border border-neon/30 whitespace-nowrap">
-          {sns.label}
-        </span>
-        <a 
-          href={sns.link} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className={`bg-surface p-4 rounded-full border border-white/10 text-offwhite transition-all hover:scale-110 shadow-2xl ${sns.color}`}
+const FloatingConsultation = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const snsLinks = [
+    { icon: <Instagram size={22}/>, label: 'Instagram DM', link: INSTAGRAM_URL, color: 'hover:text-neon' },
+    { icon: <MessageCircle size={22}/>, label: 'KakaoTalk', link: "#", color: 'hover:text-[#FEE500]' },
+    { icon: <Send size={22}/>, label: 'Telegram', link: "#", color: 'hover:text-[#0088cc]' },
+    { icon: <MessageCircle size={22}/>, label: 'WeChat', link: "#", color: 'hover:text-[#07C160]' },
+    { icon: <ExternalLink size={22}/>, label: 'Messenger', link: "#", color: 'hover:text-[#0084FF]' },
+  ];
+
+  return (
+    <div 
+      className="fixed bottom-8 right-8 z-[100] flex flex-col items-center"
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+    >
+      <div className="flex flex-col-reverse items-center">
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-14 h-14 rounded-full bg-black border ${isOpen ? 'border-neon ring-4 ring-neon/20' : 'border-white/20'} flex items-center justify-center text-white transition-all shadow-2xl group hover:border-neon z-20`}
         >
-          {sns.icon}
-        </a>
-      </motion.div>
-    ))}
-    <div className="h-10 w-[1px] bg-neon mx-auto mt-2 animate-pulse" />
-  </div>
-);
+          <motion.div
+            animate={{ rotate: isOpen ? 90 : 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {isOpen ? <X size={24} className="text-neon" /> : <MessageCircle size={24} className="group-hover:text-neon text-white/70" />}
+          </motion.div>
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+              animate={{ height: 'auto', opacity: 1, marginBottom: 16 }}
+              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+              className="flex flex-col gap-4 overflow-hidden px-2 pb-2"
+            >
+              {snsLinks.map((sns, idx) => (
+                <motion.div 
+                  key={idx} 
+                  className="group relative flex items-center justify-center"
+                  initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                  transition={{ duration: 0.2, delay: (snsLinks.length - 1 - idx) * 0.05 }}
+                >
+                  <span className="absolute right-16 opacity-0 group-hover:opacity-100 transition-all text-[8px] tracking-widest text-neon bg-black/90 px-3 py-1.5 border border-neon/30 whitespace-nowrap uppercase italic font-bold">
+                    {sns.label}
+                  </span>
+                  <a 
+                    href={sns.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={`bg-surface p-3.5 rounded-full border border-white/10 text-offwhite transition-all hover:scale-110 shadow-2xl ${sns.color}`}
+                  >
+                    {React.cloneElement(sns.icon as React.ReactElement, { size: 18 })}
+                  </a>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      
+      {!isOpen && (
+        <div className="h-8 w-[1px] bg-neon/20 mx-auto mt-2 animate-pulse" />
+      )}
+    </div>
+  );
+};
 
 /**
  * Drop Card Component
