@@ -194,7 +194,7 @@ const TRANSLATIONS: Record<string, any> = {
  * Background Music Component (Hidden YouTube Player)
  */
 const BackgroundMusic = ({ url, isAdmin }: { url: string | undefined | null, isAdmin?: boolean }) => {
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   
   if (!url) {
@@ -567,7 +567,8 @@ const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-re
 
   useEffect(() => {
     if (isMediaLoaded) {
-      const timer = setTimeout(() => setIsReady(true), 1200);
+      // Increase delay to 6.5 seconds to hide YouTube initial watermarks/logo
+      const timer = setTimeout(() => setIsReady(true), 6500);
       return () => clearTimeout(timer);
     }
   }, [isMediaLoaded]);
@@ -614,7 +615,7 @@ const MediaRenderer = ({ url, type, className, alt = "", referrerPolicy = "no-re
           )}
           <iframe 
             src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}${controls ? '&controls=1' : '&controls=0'}&modestbranding=1&rel=0&iv_load_policy=3&showinfo=0&enablejsapi=1`} 
-            className={`w-full h-full transition-all duration-[2000ms] ease-out ${isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-110'} ${!controls ? 'pointer-events-none' : ''}`}
+            className={`w-full h-full transition-all duration-[2000ms] ease-out ${isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-110'} ${!controls ? 'pointer-events-none scale-[1.15]' : ''}`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             title={alt}
