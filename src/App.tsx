@@ -439,14 +439,25 @@ const DropCard = ({ product, locale, userStatus, isAdmin, onEdit, onDelete, onIm
       )}
 
       <div 
-        className="aspect-[1/1] md:aspect-[3/4] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700 cursor-zoom-in"
-        onClick={() => onImageClick?.(product.image)}
+        className="aspect-[1/1] md:aspect-[4/5] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700 cursor-zoom-in relative"
+        onClick={() => {
+          if (product.images && product.images.length > 0) {
+            setSelectedImg({ url: product.images[0], type: 'image', gallery: product.images });
+          } else {
+            setSelectedImg({ url: product.image, type: 'image' });
+          }
+        }}
       >
         <MediaRenderer 
           url={product.image} 
           alt={product.name} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
         />
+        {product.images && product.images.length > 1 && (
+          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[7px] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+            <Camera size={8} /> {product.images.length}
+          </div>
+        )}
       </div>
       <div className="p-3 md:p-5 lg:p-6 space-y-3 md:space-y-4 lg:space-y-6">
         <div className="flex justify-between items-start gap-2">
@@ -683,7 +694,7 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [selectedImg, setSelectedImg] = useState<{url: string, type: 'image' | 'video'} | null>(null);
+  const [selectedImg, setSelectedImg] = useState<{url: string, type: 'image' | 'video', gallery?: string[]} | null>(null);
 
   // Firestore Data States
   const [siteContent, setSiteContent] = useState<any>({
@@ -797,6 +808,7 @@ export default function App() {
     name: '',
     description: '',
     image: '',
+    images: [] as string[],
     instaLink: INSTAGRAM_URL,
     krw: '',
     usd: '',
@@ -895,7 +907,8 @@ export default function App() {
       const data = {
         name: productForm.name,
         description: productForm.description,
-        image: productForm.image,
+        image: productForm.image || (productForm.images && productForm.images[0]) || '',
+        images: productForm.images || [],
         instaLink: productForm.instaLink,
         prices: {
           krw: cleanKrw,
@@ -921,6 +934,7 @@ export default function App() {
         name: '',
         description: '',
         image: '',
+        images: [],
         instaLink: INSTAGRAM_URL,
         krw: '',
         usd: '',
@@ -1287,8 +1301,8 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="px-4 md:px-10 pt-28 md:pt-36 pb-20"
             >
-              <div className="flex justify-between items-center mb-6 md:mb-10">
-                <h2 className="text-xl md:text-3xl font-light tracking-[0.3em] md:tracking-[0.5em] uppercase text-white">Archive</h2>
+              <div className="flex justify-between items-center mb-6 md:mb-16">
+                <h2 className="text-4xl md:text-7xl font-black tracking-tighter text-white uppercase italic">Archive</h2>
                 {isAdmin && (
                   <button 
                     onClick={() => setIsAddingPortfolio(!isAddingPortfolio)}
@@ -1463,22 +1477,66 @@ export default function App() {
                   
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                     <div className="space-y-6">
-                      <div className="aspect-[3/4] bg-black border border-white/10 flex items-center justify-center overflow-hidden">
-                        {productForm.image ? (
-                          <img src={productForm.image} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <div className="aspect-[3/4] bg-black border border-white/10 flex items-center justify-center overflow-hidden relative group">
+                        {(productForm.images && productForm.images.length > 0) ? (
+                          <img 
+                            src={productForm.images[0]} 
+                            alt="Main Preview" 
+                            className="w-full h-full object-cover" 
+                            referrerPolicy="no-referrer" 
+                          />
+                        ) : productForm.image ? (
+                          <img 
+                            src={productForm.image} 
+                            alt="Main Preview" 
+                            className="w-full h-full object-cover" 
+                            referrerPolicy="no-referrer" 
+                          />
                         ) : (
                           <Camera size={32} className="text-white/10" />
                         )}
+                        <div className="absolute top-2 left-2 bg-neon text-black text-[7px] px-1.5 py-0.5 font-black uppercase">Main Thumbnail</div>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] tracking-widest text-white/40 uppercase">Image URL (Direct Link)</label>
-                        <input 
-                          type="text" 
-                          placeholder="https://..."
-                          value={productForm.image}
-                          onChange={(e) => setProductForm({...productForm, image: resolveDirectImageUrl(e.target.value)})}
-                          className="w-full bg-black border border-white/10 px-4 py-3 text-xs text-white focus:border-neon outline-none"
-                        />
+                      
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] tracking-widest text-white/40 uppercase font-black italic">Gallery Images (Max 8)</label>
+                          <span className="text-[8px] text-white/20">{(productForm.images ? productForm.images.length : 0)} / 8</span>
+                        </div>
+                        
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                          {[...Array(8)].map((_, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-white/20 w-4 font-mono">0{idx + 1}</span>
+                                <input 
+                                  type="text" 
+                                  placeholder={`Image URL ${idx + 1}`}
+                                  value={(productForm.images && productForm.images[idx]) || ''}
+                                  onChange={(e) => {
+                                    const newImages = [...(productForm.images || [])];
+                                    newImages[idx] = resolveDirectImageUrl(e.target.value);
+                                    // Remove empty slots if they are at the end, but keep the current one being edited
+                                    setProductForm({ ...productForm, images: newImages });
+                                  }}
+                                  className="flex-1 bg-black border border-white/10 px-3 py-2 text-[10px] text-white focus:border-neon outline-none"
+                                />
+                                {(productForm.images && productForm.images[idx]) && (
+                                  <button 
+                                    onClick={() => {
+                                      const newImages = (productForm.images || []).filter((_, i) => i !== idx);
+                                      setProductForm({ ...productForm, images: newImages });
+                                    }}
+                                    className="text-red-500 hover:text-red-400"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[7px] text-white/20 tracking-wider uppercase italic">※ The first image will be used as the main thumbnail.</p>
                       </div>
                     </div>
 
@@ -1575,7 +1633,7 @@ export default function App() {
                 </motion.div>
               )}
 
-              <div className="grid grid-cols-3 gap-1 md:gap-4 lg:gap-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                 {products.length > 0 ? (
                   products.map(product => (
                     <DropCard 
@@ -1591,6 +1649,7 @@ export default function App() {
                           name: p.name || '',
                           description: p.description || '',
                           image: p.image || '',
+                          images: p.images || [],
                           instaLink: p.instaLink || INSTAGRAM_URL,
                           krw: p.prices?.krw || '',
                           usd: p.prices?.usd || '',
@@ -1598,7 +1657,7 @@ export default function App() {
                           vipDropDate: p.vipDropDate || new Date().toISOString().slice(0, 16)
                         });
                         setIsAddingProduct(true);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.scrollTo({ top: 300, behavior: 'smooth' });
                       }}
                       onDelete={handleDeleteProduct}
                     />
@@ -1619,8 +1678,8 @@ export default function App() {
               animate={{ opacity: 1 }}
               className="max-w-7xl mx-auto pt-28 md:pt-36 pb-20 md:pb-32 px-4 md:px-10"
             >
-              <div className="text-center mb-20 space-y-6">
-                <h2 className="text-4xl tracking-[0.5em] text-white font-light uppercase">{TRANSLATIONS[locale].reservation}</h2>
+              <div className="text-center mb-24 space-y-8">
+                <h2 className="text-4xl md:text-7xl font-black tracking-tighter text-white uppercase italic">{TRANSLATIONS[locale].reservation}</h2>
                 <div className="h-[1px] w-12 bg-neon mx-auto" />
                 <p className="text-offwhite/40 text-[10px] tracking-widest leading-loose whitespace-pre-line">
                   {TRANSLATIONS[locale].resDesc}
@@ -1818,24 +1877,75 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-10" 
+            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 md:p-10" 
             onClick={() => setSelectedImg(null)}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-4xl aspect-video md:h-[80vh] flex items-center justify-center relative shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MediaRenderer 
-                url={selectedImg.url} 
-                type={selectedImg.type} 
-                controls={true}
-                className="w-full h-full object-contain" 
-                alt="Full View" 
-              />
-            </motion.div>
+            <div className="relative w-full max-w-6xl flex items-center justify-center">
+              {/* Previous Button */}
+              {selectedImg.gallery && selectedImg.gallery.length > 1 && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const currentIdx = selectedImg.gallery!.indexOf(selectedImg.url);
+                    const prevIdx = (currentIdx - 1 + selectedImg.gallery!.length) % selectedImg.gallery!.length;
+                    setSelectedImg({ ...selectedImg, url: selectedImg.gallery![prevIdx] });
+                  }}
+                  className="absolute left-0 md:-left-20 z-10 p-4 text-white/50 hover:text-neon transition-colors"
+                >
+                  <ChevronLeft size={48} />
+                </button>
+              )}
+
+              <motion.div
+                key={selectedImg.url}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="w-full h-full max-h-[85vh] flex items-center justify-center relative shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="md:h-full w-full flex items-center justify-center">
+                  <MediaRenderer 
+                    url={selectedImg.url} 
+                    type={selectedImg.type} 
+                    controls={true}
+                    className="max-w-full max-h-full object-contain" 
+                    alt="Full View" 
+                  />
+                </div>
+              </motion.div>
+
+              {/* Next Button */}
+              {selectedImg.gallery && selectedImg.gallery.length > 1 && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const currentIdx = selectedImg.gallery!.indexOf(selectedImg.url);
+                    const nextIdx = (currentIdx + 1) % selectedImg.gallery!.length;
+                    setSelectedImg({ ...selectedImg, url: selectedImg.gallery![nextIdx] });
+                  }}
+                  className="absolute right-0 md:-right-20 z-10 p-4 text-white/50 hover:text-neon transition-colors"
+                >
+                  <ChevronRight size={48} />
+                </button>
+              )}
+            </div>
+
+            {/* Gallery Thumbnails Overlay */}
+            {selectedImg.gallery && selectedImg.gallery.length > 1 && (
+              <div className="mt-8 flex gap-2 overflow-x-auto pb-2 px-4 max-w-full custom-scrollbar" onClick={(e) => e.stopPropagation()}>
+                {selectedImg.gallery.map((img, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setSelectedImg({ ...selectedImg, url: img })}
+                    className={`w-12 h-16 md:w-16 md:h-20 border-2 transition-all shrink-0 ${selectedImg.url === img ? 'border-neon' : 'border-white/10 opacity-40 hover:opacity-100'}`}
+                  >
+                    <img src={img} className="w-full h-full object-cover" alt={`Thumb ${idx}`} />
+                  </button>
+                ))}
+              </div>
+            )}
+
             <button className="absolute top-10 right-10 text-white/50 hover:text-neon transition-colors">
               <X size={40} />
             </button>
